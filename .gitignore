@@ -1,0 +1,164 @@
+*.a
+*.bin
+*.hex
+*.map
+*.png
+*.log
+*.elf
+*.zip
+*.d
+*.o
+*.e
+*.ihex
+*.pyc
+*~
+build/*
+Makefile.target
+Makefile.*.defines
+tools/doxygen/html
+tools/readthedocs/_build
+tools/readthedocs/doc
+tools/readthedocs/examples
+patches-*
+tools/serial-io/tunslip6
+tools/serial-io/serialdump
+serialdump-*
+build
+tools/coffee-manager/build/
+tools/coffee-manager/coffee.jar
+COOJA.testlog
+
+# do not ignore images in documentation
+!tools/readthedocs/**/*.png
+!doc/**/*.png
+
+# other nRF52 build artifacts
+*.jlink
+
+#test artifacts
+*.testlog
+*.scriptlog
+*.coojalog
+*.summary
+*.err
+summary
+tests/18-coap-lwm2m/Californium.properties
+tests/18-coap-lwm2m/leshan-server-demo*.jar
+
+# --- Quilla / PY32F040xB: Keil & EIDE build outputs ---
+*.axf
+*.crf
+*.dep
+*.lnp
+*.tra
+*.lst
+*.uo
+*.scvd
+*.bak
+*.orig
+*.pyo
+**/*_Output/
+Objects/
+Listings/
+DebugConfig/
+.settings/
+DebugFlash/
+Flash/
+Debug/
+Release/
+__pycache__/
+.DS_Store
+Thumbs.db
+
+# --- Quilla: local verification scratch produced by .workbuddy/tools/*.py ---
+*.exe
+*.out
+*.pdb
+.workbuddy/rambuild/
+.workbuddy/szbuild/
+.workbuddy/stacksym/
+.workbuddy/cgbuild/
+.workbuddy/tools/cgbuild/
+.workbuddy/tools/subuild/
+.workbuddy/tools/repro.log
+.workbuddy/tools/fix.log
+.workbuddy/tools/stage.log
+.workbuddy/tools/rambuild/
+.workbuddy/tools/szbuild/
+.workbuddy/tools/stacksym/
+.workbuddy/_stale/
+.workbuddy/_norm_*.txt
+.workbuddy/_*.txt
+.workbuddy/tools/rambuild/
+.workbuddy/tools/szbuild/
+.workbuddy/tools/stacksym/
+.workbuddy/tools/stubinc/
+.workbuddy/tools/t.c
+
+# note: .workbuddy/memory/ and .workbuddy/tools/*.py are intentionally tracked.
+# note: one-off helpers written during a session are scratch, not deliverables.
+.workbuddy/tools/_*.py
+# note: the upstream `build` rule above would swallow safety/build/ (the records
+#       directory), because it matches any directory named `build` at any depth.
+!safety/build/
+!safety/build/**
+
+# --- Quilla: Keil / EIDE generated build outputs (NOT source; regenerated on
+#     build). They must never be committed -- only the project definitions
+#     (*.uvprojx), Makefiles, linker scripts and sources are tracked.
+**/MDK-ARM/Output/
+**/MDK-ARM/RTE/
+*.uvoptx
+*.uvprojx.pre-osboot
+ExtDll.iex
+
+# --- Quilla: developer TEST keys under tools/_keytest/ ARE tracked on purpose
+#     so a fresh clone is out-of-the-box usable (build + boot + sign all work
+#     immediately). They are TEST keys only; the production key is generated
+#     offline and never committed (see tools/_keytest/README.md). The global
+#     *.hex above would otherwise swallow them, so un-ignore just this dir.
+!tools/_keytest/*.hex
+
+# --- Quilla: .workbuddy/ is local-only (AI working memory, MISRA/audit tooling,
+#     fixtures). Per project decision it must NEVER be committed -- not source,
+#     not deliverable. Keep it out of every future commit.
+.workbuddy/
+
+# --- Quilla: internal-only files (kept locally for the private mirror, excluded
+#     from the public repo). Untracked via `git rm --cached`; ignored here so an
+#     accidental `git add .` never re-adds them.
+/safety/
+/doc/changenotice.md
+/doc/safety-cert-gap.md
+/doc/safety-scm-roles.md
+/doc/misra-compliance.md
+/doc/misra-contiki-rule16.4-audit.md
+/doc/misra-switch-guideline.md
+/tools/misra_*.py
+/tools/verify_*.py
+/tools/ed25519_oracle.py
+/tools/ed25519_rfc_vectors.json
+/tools/sb_fixture.inc
+/tools/gen_sb_fixture.py
+/tools/register_*.py
+/tools/measure_*.py
+/tools/check_*.py
+/tools/rename_*.py
+/tools/repartition_py32.py
+/tools/collect_toolchain.py
+/tools/patch_gd32_keil_groups.py
+/tools/stubinc/
+# note: tools/_keytest/private.hex + public.hex stay TRACKED on purpose -- the
+#       SEALED/SEC upgrade flow (quilla_host_upgrader.py --key) needs the matching
+#       sample private key for an out-of-the-box fresh clone (see _keytest/README.md).
+/OPEN-SOURCE-PREP.md
+
+# --- Quilla: local git hooks (internal SCM gate: commit-msg checks CR/Reviewed-by).
+#     Useless to contributors (GitHub does not activate core.hooksPath) and would
+#     block their commits if enabled; kept local only, never committed.
+/.githooks/
+
+# --- Quilla: unfinished IAR (EWARM) project for PY32F040xB -- legacy, points at
+#     stale external paths; not part of the build (GNU EIDE + Keil only). Untracked
+#     and dropped from the docs until it is actually completed.
+/user/py32f040xb/EWARM/

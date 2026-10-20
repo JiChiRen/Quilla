@@ -1,0 +1,75 @@
+# Quilla CI
+#
+# Lean verification for the Quilla secure-boot RTOS platform. Quilla is built on
+# the Contiki-NG base; this workflow replaces the upstream Contiki-NG test
+# matrix (which exercised Cooja/renode simulations, the RPL/CoAP protocol
+# suites, and a Docker toolchain image) with the checks that actually apply to
+# this repository:
+#
+#   firmware-gnu : builds the GNU (arm-none-eabi-gcc) firmware for every
+#                  supported MCU (PY32F040xB, GD32F502VE) — QBOOT (CHECK and
+#                  the default SEALED secure-boot variant) and QAPP. This is the
+#                  only firmware path that can run on public CI; the Keil /
+#                  armclang (Cortex-M33 secure-boot) builds require a Keil
+#                  license and are verified on a developer machine instead.
+#
+#   host-tools   : runs the Python host-side tooling self-tests — the Ed25519
+#                  signing utility and the serial OTA upgrader shipped to
+#                  integrators.
+#
+# The workflow builds out-of-tree under each MCU's EIDE directory, so a fresh
+# checkout never carries stale dependency files.
+
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop, release-* ]
+
+# Cancel superseded runs on the same ref; never cancel merge/push runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  firmware-gnu:
+    name: Firmware (arm-none-eabi-gcc, ${{ matrix.mcu }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mcu: [ py32f040xb, gd32f502ve ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install GNU Arm toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi
+
+      - name: Build QBOOT (CHECK variant)
+        run: make -C user/${{ matrix.mcu }}/EIDE -f Makefile.qboot
+
+      - name: Build QBOOT (SEALED variant — default secure-boot mode)
+        run: make -C user/${{ matrix.mcu }}/EIDE -f Makefile.qboot.sealed
+
+      - name: Build QAPP
+        run: make -C user/${{ matrix.mcu }}/EIDE
+
+  host-tools:
+    name: Host tools self-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run upgrader self-test
+        run: python tools/quilla_host_upgrader.py --self-test

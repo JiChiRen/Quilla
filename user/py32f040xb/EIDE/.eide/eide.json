@@ -1,0 +1,330 @@
+{
+  "name": "Project",
+  "type": "ARM",
+  "dependenceList": [],
+  "srcDirs": [],
+  "virtualFolder": {
+    "name": "<virtual_root>",
+    "files": [],
+    "folders": [
+      {
+        "name": "BSP",
+        "files": [
+          {
+            "path": "../BSP/PY32F040xx_Start_Kit/py32f040xx_Start_Kit.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Common",
+        "files": [
+          {
+            "path": "../../../arch/cpu/arm/CMSIS/Device/Puya/PY32F040/Source/system_py32f040.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/CMSIS/Device/Puya/PY32F040/Source/GCC/startup_py32f040xx.s"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Doc",
+        "files": [
+          {
+            "path": "../readme.txt"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "PY32F040_HAL_Driver",
+        "files": [
+          {
+            "path": "../../../arch/cpu/arm/vendor/Puya/PY32F040_HAL_Driver/Src/py32f040_hal.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/Puya/PY32F040_HAL_Driver/Src/py32f040_hal_rcc.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/Puya/PY32F040_HAL_Driver/Src/py32f040_hal_rcc_ex.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/Puya/PY32F040_HAL_Driver/Src/py32f040_hal_gpio.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/Puya/PY32F040_HAL_Driver/Src/py32f040_hal_dma.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/Puya/PY32F040_HAL_Driver/Src/py32f040_hal_pwr.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/Puya/PY32F040_HAL_Driver/Src/py32f040_hal_uart.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/Puya/PY32F040_HAL_Driver/Src/py32f040_hal_cortex.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/Puya/PY32F040_HAL_Driver/Src/py32f040_hal_lptim.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/Puya/PY32F040_HAL_Driver/Src/py32f040_hal_iwdg.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/Puya/PY32F040_HAL_Driver/Src/py32f040_hal_flash.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "User",
+        "files": [
+          {
+            "path": "../Src/main.c"
+          },
+          {
+            "path": "../Src/py32f040_hal_msp.c"
+          },
+          {
+            "path": "../Src/py32f040_it.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Contiki",
+        "files": [
+          {
+            "path": "../../../os/sys/atomic.c"
+          },
+          {
+            "path": "../../../os/sys/autostart.c"
+          },
+          {
+            "path": "../../../os/sys/ctimer.c"
+          },
+          {
+            "path": "../../../os/sys/etimer.c"
+          },
+          {
+            "path": "../../../os/sys/mutex.c"
+          },
+          {
+            "path": "../../../os/sys/process.c"
+          },
+          {
+            "path": "../../../os/sys/kern-guard.c"
+          },
+          {
+            "path": "../../../os/sys/kern-nomalloc.c"
+          },
+          {
+            "path": "../../../os/sys/kern-stack.c"
+          },
+          {
+            "path": "../../../os/sys/kern-flow.c"
+          },
+          {
+            "path": "../../../os/sys/process-mutex.c"
+          },
+          {
+            "path": "../../../os/sys/rtimer.c"
+          },
+          {
+            "path": "../../../os/sys/stimer.c"
+          },
+          {
+            "path": "../../../os/sys/timer.c"
+          },
+          {
+            "path": "../../../os/lib/assert.c"
+          },
+          {
+            "path": "../../../os/lib/crc16.c"
+          },
+          {
+            "path": "../../../os/lib/list.c"
+          },
+          {
+            "path": "../../../os/lib/memb.c"
+          },
+          {
+            "path": "../../../os/lib/ringbuf.c"
+          },
+          {
+            "path": "../../../os/lib/ringbufindex.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Arch",
+        "files": [
+          {
+            "path": "../../../arch/cpu/arm/py32f040xb/rtimer-arch.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/int-master.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/py32f040xb/clock.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/py32f040xb/lpm.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/py32f040xb/soc.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/py32f040xb/dev/watchdog.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/py32f040xb/dev/qwdt.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/py32f040xb/dev/qclk.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/py32f040xb/shellport.c"
+          },
+          {
+            "path": "../../../os/services/shell/quilla-shell.c"
+          },
+          {
+            "path": "../../../arch/platform/arm/py32f040xb/platform.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/py32f040xb/quilla-qboot-hal.c"
+          },
+          {
+            "path": "../../../os/services/quilla-qboot/quilla-qboot-flag.c"
+          },
+          {
+            "path": "../../../os/services/quilla-qboot/quilla-qboot-meta.c"
+          },
+          {
+            "path": "../../../os/services/quilla-qboot/quilla-app-qboot.c"
+          }
+        ],
+        "folders": []
+      }
+    ]
+  },
+  "outDir": ".",
+  "deviceName": "PY32F040xB",
+  "packDir": null,
+  "miscInfo": {
+    "uid": "36bcf0031e18a3008bbdaa90a96a7987"
+  },
+  "targets": {
+    "Project": {
+      "excludeList": [
+        "../../../arch/cpu/arm/dbg.c"
+      ],
+      "toolchain": "GCC",
+      "compileConfig": {
+        "cpuType": "Cortex-M0+",
+        "floatingPointHardware": "none",
+        "scatterFilePath": "../../../arch/cpu/arm/CMSIS/Device/Puya/PY32F040/Source/GCC/Ld/py32f040xb_app.ld",
+        "useCustomScatterFile": true,
+        "storageLayout": {
+          "RAM": [],
+          "ROM": []
+        },
+        "options": "null"
+      },
+      "uploader": "pyOCD",
+      "uploadConfig": {
+        "bin": "",
+        "targetName": "PY32F040xB",
+        "baseAddr": "0x08007000",
+        "speed": "4M",
+        "otherCmds": "\"--pack=${env:PYSDEPATH}\\packs\\PY32F0xx_DFP.pack\"",
+        "config": ".eide/project.pyocd.yaml"
+      },
+      "uploadConfigMap": {
+        "JLink": {
+          "bin": "",
+          "baseAddr": "",
+          "cpuInfo": {
+            "vendor": "Puya",
+            "cpuName": "py32f040xb"
+          },
+          "proType": 1,
+          "speed": 1000,
+          "otherCmds": ""
+        },
+        "OpenOCD": {
+          "bin": "",
+          "target": "py32f040xb",
+          "interface": "cmsis-dap",
+          "baseAddr": "0x08007000"
+        },
+        "pyOCD": {
+          "bin": "",
+          "targetName": "PY32F040xB",
+          "baseAddr": "0x08007000",
+          "speed": "4M",
+          "otherCmds": "\"--pack=${env:PYSDEPATH}\\packs\\PY32F0xx_DFP.pack\"",
+          "config": ".eide/project.pyocd.yaml"
+        }
+      },
+      "custom_dep": {
+        "name": "default",
+        "incList": [
+          "../Inc",
+          "../../../os",
+          "../../../os/sys",
+          "../../../os/lib",
+          "../../../arch/cpu/arm",
+          "../../../arch/cpu/arm/py32f040xb",
+          "../../../arch/cpu/arm/py32f040xb",
+          "../../../arch/platform/arm",
+          "../../../arch/platform/arm/py32f040xb",
+          "../BSP/PY32F040xx_Start_Kit",
+          "../../../arch/cpu/arm/vendor/Puya/PY32F040_HAL_Driver/Inc",
+          "../../../arch/cpu/arm/CMSIS/Device/Puya/PY32F040/Include",
+          "../../../arch/cpu/arm/CMSIS/Core/Include"
+        ],
+        "libList": [],
+        "defineList": [
+          "USE_HAL_DRIVER",
+          "PY32F040xB",
+          "QAPP_BUILD"
+        ]
+      },
+      "builderOptions": {
+        "GCC": {
+          "version": 5,
+          "beforeBuildTasks": [],
+          "afterBuildTasks": [],
+          "global": {
+            "$float-abi-type": "softfp",
+            "output-debug-info": "enable",
+            "misc-control": "--specs=nosys.specs --specs=nano.specs"
+          },
+          "c/cpp-compiler": {
+            "language-c": "c11",
+            "language-cpp": "c++11",
+            "optimization": "level-debug",
+            "warnings": "all-warnings",
+            "one-elf-section-per-function": true,
+            "one-elf-section-per-data": true,
+            "C_FLAGS": "",
+            "CXX_FLAGS": ""
+          },
+          "asm-compiler": {
+            "ASM_FLAGS": ""
+          },
+          "linker": {
+            "output-format": "elf",
+            "remove-unused-input-sections": true,
+            "LD_FLAGS": " ",
+            "LIB_FLAGS": "-lm"
+          }
+        }
+      }
+    }
+  },
+  "version": "3.5"
+}

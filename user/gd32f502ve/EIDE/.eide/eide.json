@@ -1,0 +1,328 @@
+{
+  "name": "Project",
+  "type": "ARM",
+  "dependenceList": [],
+  "srcDirs": [],
+  "virtualFolder": {
+    "name": "<virtual_root>",
+    "files": [],
+    "folders": [
+      {
+        "name": "CMSIS/Device",
+        "files": [
+          {
+            "path": "../../../arch/cpu/arm/CMSIS/Device/GigaDevice/GD32F50x/Source/system_gd32f50x.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/CMSIS/Device/GigaDevice/GD32F50x/Source/GCC/startup_gd32f50x.S"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "GD32F50x_Peripherals",
+        "files": [
+          {
+            "path": "../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_rcu.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_gpio.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_usart.c"
+        },
+        {
+            "path": "../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_dma.c"
+        },
+          {
+            "path": "../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_timer.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_fmc.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_misc.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_syscfg.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_pmu.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_rtc.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_fwdgt.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Application/User",
+        "files": [
+          {
+            "path": "../Src/main.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "os/sys",
+        "files": [
+          {
+            "path": "../../../os/sys/atomic.c"
+          },
+          {
+            "path": "../../../os/sys/autostart.c"
+          },
+          {
+            "path": "../../../os/sys/ctimer.c"
+          },
+          {
+            "path": "../../../os/sys/etimer.c"
+          },
+          {
+            "path": "../../../os/sys/mutex.c"
+          },
+          {
+            "path": "../../../os/sys/process.c"
+          },
+          {
+            "path": "../../../os/sys/kern-guard.c"
+          },
+          {
+            "path": "../../../os/sys/kern-nomalloc.c"
+          },
+          {
+            "path": "../../../os/sys/kern-stack.c"
+          },
+          {
+            "path": "../../../os/sys/kern-flow.c"
+          },
+          {
+            "path": "../../../os/sys/process-mutex.c"
+          },
+          {
+            "path": "../../../os/sys/rtimer.c"
+          },
+          {
+            "path": "../../../os/sys/stimer.c"
+          },
+          {
+            "path": "../../../os/sys/timer.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "os/lib",
+        "files": [
+          {
+            "path": "../../../os/lib/assert.c"
+          },
+          {
+            "path": "../../../os/lib/crc16.c"
+          },
+          {
+            "path": "../../../os/lib/list.c"
+          },
+          {
+            "path": "../../../os/lib/memb.c"
+          },
+          {
+            "path": "../../../os/lib/ringbuf.c"
+          },
+          {
+            "path": "../../../os/lib/ringbufindex.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "os/services",
+        "files": [
+          {
+            "path": "../../../os/services/shell/quilla-shell.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "quilla-qboot",
+        "files": [
+          {
+            "path": "../../../os/services/quilla-qboot/quilla-qboot-flag.c"
+          },
+          {
+            "path": "../../../os/services/quilla-qboot/quilla-qboot-meta.c"
+          },
+          {
+            "path": "../../../os/services/quilla-qboot/quilla-app-qboot.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Arch",
+        "files": [
+          {
+            "path": "../../../arch/cpu/arm/gd32f502ve/clock.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/gd32f502ve/rtimer-arch.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/gd32f502ve/lpm.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/gd32f502ve/soc.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/gd32f502ve/shellport.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/gd32f502ve/quilla-qboot-hal.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/gd32f502ve/dev/watchdog.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/gd32f502ve/dev/qwdt.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/gd32f502ve/dev/qclk.c"
+          },
+          {
+            "path": "../../../arch/cpu/arm/int-master.c"
+          },
+          {
+            "path": "../../../arch/platform/arm/gd32f502ve/platform.c"
+          }
+        ],
+        "folders": []
+      }
+    ]
+  },
+  "outDir": ".",
+  "deviceName": "GD32F502VE",
+  "packDir": null,
+  "targets": {
+    "Project": {
+      "excludeList": [],
+      "toolchain": "GCC",
+      "compileConfig": {
+        "cpuType": "Cortex-M33",
+        "floatingPointHardware": "none",
+        "scatterFilePath": "../../../arch/cpu/arm/CMSIS/Device/GigaDevice/GD32F50x/Source/GCC/Ld/gd32f502xE_app.ld",
+        "useCustomScatterFile": true,
+        "storageLayout": {
+          "RAM": [],
+          "ROM": []
+        },
+        "options": "null"
+      },
+      "uploader": "JLink",
+      "uploadConfig": {
+        "bin": "",
+        "baseAddr": "0x08010000",
+        "cpuInfo": {
+          "vendor": "GigaDevice",
+          "cpuName": "GD32F502VE"
+        },
+        "proType": 1,
+        "speed": 4000,
+        "otherCmds": ""
+      },
+      "uploadConfigMap": {
+        "OpenOCD": {
+          "bin": "",
+          "target": "",
+          "interface": "cmsis-dap",
+          "baseAddr": "0x08010000"
+        },
+        "pyOCD": {
+          "bin": "",
+          "targetName": "GD32F502VE",
+          "baseAddr": "0x08010000",
+          "speed": "4M",
+          "otherCmds": "",
+          "config": ".eide/project.pyocd.yaml"
+        },
+        "JLink": {
+          "bin": "",
+          "baseAddr": "0x08010000",
+          "cpuInfo": {
+            "vendor": "GigaDevice",
+            "cpuName": "GD32F502VE"
+          },
+          "proType": 1,
+          "speed": 4000,
+          "otherCmds": ""
+        }
+      },
+      "custom_dep": {
+        "name": "default",
+        "incList": [
+          "../Inc",
+          "../../../os",
+          "../../../os/sys",
+          "../../../os/lib",
+          "../../../os/services/shell",
+          "../../../os/services/quilla-qboot",
+          "../../../arch/cpu/arm",
+          "../../../arch/cpu/arm/gd32f502ve",
+          "../../../arch/platform/arm",
+          "../../../arch/platform/arm/gd32f502ve",
+          "../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Include",
+          "../../../arch/cpu/arm/CMSIS/Device/GigaDevice/GD32F50x/Include",
+          "../../../arch/cpu/arm/CMSIS/Core/Include"
+        ],
+        "libList": [],
+        "defineList": [
+          "GD32F50X",
+          "GD32F502",
+          "QAPP_BUILD",
+          "QUILLA_QBOOT_APP_START=0x08007000U",
+          "QUILLA_QBOOT_APP_END=0x0807FFFFU",
+          "QUILLA_QBOOT_FLAG_ADDR=0x08006000U",
+          "QUILLA_QBOOT_PAGE_SIZE=2048U",
+          "QUILLA_QBOOT_RAM_START=0x20000000U",
+          "QUILLA_QBOOT_RAM_SIZE=0x00010000U"
+        ]
+      },
+      "builderOptions": {
+        "GCC": {
+          "version": 5,
+          "beforeBuildTasks": [],
+          "afterBuildTasks": [],
+          "global": {
+            "$float-abi-type": "soft",
+            "output-debug-info": "enable",
+            "misc-control": "--specs=nosys.specs --specs=nano.specs"
+          },
+          "c/cpp-compiler": {
+            "language-c": "c11",
+            "language-cpp": "c++11",
+            "optimization": "level-debug",
+            "warnings": "all-warnings",
+            "one-elf-section-per-function": true,
+            "one-elf-section-per-data": true,
+            "C_FLAGS": "",
+            "CXX_FLAGS": ""
+          },
+          "asm-compiler": {
+            "ASM_FLAGS": ""
+          },
+          "linker": {
+            "output-format": "elf",
+            "remove-unused-input-sections": true,
+            "LD_FLAGS": " -Wl,--no-warn-rwx-segments",
+            "LIB_FLAGS": "-lm"
+          }
+        }
+      }
+    }
+  },
+  "version": "3.5"
+}

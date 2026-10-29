@@ -95,7 +95,13 @@ kern_stack_current_sp(void)
 {
   uint32_t sp;
 
+#if defined(__riscv)
+  /* RISC-V: the active stack pointer is the general register sp (x2). */
+  __asm__ volatile("mv %0, sp" : "=r"(sp));
+#else
+  /* MRS <Rn>, MSP is valid on ARMv6-M. */
   __asm__ volatile("mrs %0, msp" : "=r"(sp));
+#endif
   return sp;
 }
 /* --------------------------------------------------------------------------*/

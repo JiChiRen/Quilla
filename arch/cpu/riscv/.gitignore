@@ -1,0 +1,3 @@
+# Vendor datasheets / reference PDFs are kept locally for bring-up but are
+# NOT tracked in the repository (large binaries, vendor documents).
+*.[Pp][Dd][Ff]

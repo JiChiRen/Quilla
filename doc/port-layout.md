@@ -6,6 +6,12 @@
 - **Related**: `doc/cmsis-layout.md` (CMSIS-Pack directory specification)
 - **Scope**: `arch/cpu/arm/` (including its `platform/`) and `user/`
 
+> **RISC-V port (CH32V305VB, `ch32v305rb`)**: the same three-layer boundary applies
+> under `arch/cpu/riscv/`, `arch/platform/riscv/` and `user/ch32v305rb/`, but the
+> build is **EIDE / GNU GCC12 only** (no Keil) and the boot images are linked at
+> the `0x00000000` Flash alias, so the whole partition scheme is `0x0`-based
+> rather than `0x0800`-based. See `doc/riscv-ch32v305-build.md`.
+
 ---
 
 ## 1. Goals
@@ -130,6 +136,8 @@ do not overwrite with the whole pack.
 | `user/gd32f502ve/MDK-ARM/APP.uvprojx` | armclang V6.16 / armlink | `GD32F502VE` + `GigaDevice.GD32F50x_DFP.1.0.1`, `<Cpu>` contains `CPUTYPE("Cortex-M33") DSP` **without FPU**, `FlashDriverDll` uses `UL2V8M` (V8-M specific), `TargetDllName` `SARMV8M.DLL -pCM33`, ROM `0x08007000/0x79000` |
 | `user/gd32f502ve/MDK-ARM/QBOOT.uvprojx` | Same as above | ROM `0x08000000/0x6000`, macro changed to `-DQBOOT_BUILD` |
 | `user/gd32f502ve/EIDE/.eide/eide.json` | arm-none-eabi-gcc | `cpuType Cortex-M33` / `floatingPointHardware none` / `$float-abi-type soft`, scatter `gd32f502xE_app.ld` |
+
+For the step-by-step GNU/EIDE build (toolchain, partition map, build targets, flashing, measured sizes), see `doc/gd32f502ve-eide-build.md` (and `doc/gd32f502ve-eide-build.zh-CN.md`).
 
 **FPU decision (important)**: although `Dfpu=1` in terms of hardware capability, neither side **uses floating point**.
 Once `FPU3(SFPU)` + `-mfloat-abi=hard` is enabled, the exception frame gains an extra S0–S15 + FPSCR, 68 bytes in total,

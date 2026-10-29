@@ -16,10 +16,10 @@ This document describes QBOOT's boot-time trust establishment strategy. It helps
 Before QBOOT hands control over to the APP, it establishes trust in the following order (step 1 always executes; steps 2 and 3 depend on the build variant):
 
 1. **Integrity (always executed)**: compute SHA-256 over the APP image (`[APP_START, APP_START + image_len)`, where `image_len` is the actual written firmware length recorded in the manifest) and compare it against the digest, detecting "image corrupted / partially flashed".
-   The cost is **proportional to the actually written APP image size**: on **PY32F040xB (Cortex-M0+ @ 8 MHz)**, a typical ~18 KB QAPP image takes about **0.6 s** (≈ 30 KB/s), i.e., an N KB APP image takes about N × 0.033 s.
+   The cost is **proportional to the actually written APP image size**: on **PY32F040xB (Cortex-M0+, 48 MHz)**, a typical ~18 KB QAPP image takes about **0.1 s** (≈ 180 KB/s), i.e., an N KB APP image takes about N × 0.0055 s.
    Missing manifest or digest mismatch → refuse to boot, fall into the QBOOT shell.
 2. **Authenticity**: perform an **Ed25519 signature verification** on the 36-byte descriptor `image_len(4) || SHA-256(32)`, with the public key compiled into the QBOOT image (not modifiable). This proves the image "was indeed signed by a party holding the private key".
-   The verification target is fixed at the 36-byte descriptor and is **independent of image size**: on **PY32F040xB (Cortex-M0+ @ 8 MHz, no 32×32→64 multiplier, no crypto acceleration, pure C bignum arithmetic)** it takes about **20 s**. GD32F502VE (Cortex-M33 @ 160 MHz, with 32×32→64 multiplier) is measured at **under 500 ms** on hardware (~18 KB image).
+   The verification target is fixed at the 36-byte descriptor and is **independent of image size**: on **PY32F040xB (Cortex-M0+, 48 MHz; no 32×32→64 multiplier, no crypto acceleration, pure C bignum arithmetic)** it takes about **3.3 s**. GD32F502VE (Cortex-M33 @ 160 MHz, with 32×32→64 multiplier) is measured at **under 500 ms** on hardware (~18 KB image).
    **Only "keyed" build variants execute this step.**
 3. **Anti-rollback**: refuse to boot when the APP image's **firmware security version** is below the monotonic "minimum version floor" persisted in the META record.
    The security version is **not owned by QBOOT and is never supplied by the host**: it is baked into the signed image region at the fixed address `QUILLA_QBOOT_APP_START + 0x400` (`0x08007400`) as part of the signed `image_len`, so it is covered by the SHA-256 digest and the Ed25519 signature — it cannot be forged without the private key. On a successful authenticated install the floor is raised to that firmware version.
@@ -77,13 +77,14 @@ Their boot policies and applicable scenarios are as follows:
 
 "Boot mode" is another orthogonal compile-time knob (`QUILLA_SB_BOOT_MODE`):
 
-| Mode | Meaning | Ed25519 at boot | Boot time (PY32F040xB, M0+/8 MHz) |
+| Mode | Meaning | Ed25519 at boot | Boot time (PY32F040xB, M0+/48 MHz) |
 |------|------|-------------------|----------|
-| `SECURE` (=0) | Verify signature on every power cycle | **Yes**, once per cycle | ~20 s (independent of image size) |
-| `SEALED` (=1, default) | Verify signature at most once per image (seal fast path) | **No** (when the seal hits) | ~0.6 s (SHA-256, varying linearly with image size) |
-| `CHECK` (=2) | Integrity only (no signature verification) | No | ~0.6 s (SHA-256, varying linearly with image size) |
+| `SECURE` (=0) | Verify signature on every power cycle | **Yes**, once per cycle | ~3.5 s (measured: SHA-256 + Ed25519 + overhead; dominated by Ed25519) |
+| `SEALED` (=1, default) | Verify signature at most once per image (seal fast path) | **No** (when the seal hits) | ~0.1 s (SHA-256, varying linearly with image size) |
+| `CHECK` (=2) | Integrity only (no signature verification) | No | ~0.1 s (SHA-256, varying linearly with image size) |
 
-> The timings in the table above are **measured magnitudes on PY32F040xB (Cortex-M0+ @ 8 MHz)**, with an ~18 KB QAPP image as the baseline; the SHA-256 portion scales with the actually written APP image size (≈ 30 KB/s). Available APP partitions: PY32F040xB ≈ 100 KB (`0x08007000`–`0x0801FFFF`), GD32F502VE ≈ 484 KB (`0x08007000`–`0x0807FFFF`); SHA-256 only computes the actually written `image_len` bytes and does not scan the entire region.
+> **PY32F040xB clock**: the device runs at 48 MHz (HSI 24 MHz + PLL×2, internal RC, no external crystal). With an ~18 KB QAPP image as the baseline, the SHA-256 portion scales linearly with the actually written APP image size. Available APP partitions: PY32F040xB ≈ 100 KB (`0x08007000`–`0x0801FFFF`), GD32F502VE ≈ 484 KB (`0x08007000`–`0x0807FFFF`); SHA-256 only computes the actually written `image_len` bytes and does not scan the entire region.
+> Measured on hardware at 48 MHz: a full-Ed25519 boot (SHA-256 + Ed25519 + boot overhead) from reset to the APP banner is ≈ 3.5 s (down from ≈ 20 s at 8 MHz) — consistent with the ≈3.3 s Ed25519 + ≈0.1 s SHA-256 breakdown above. Ed25519 is the dominant, image-size-independent term; the SHA-256 figure is an estimate (~18–20 KB image, ≈180 KB/s). Captured as end-to-end reset→APP-banner timing on target.
 > GD32F502VE (Cortex-M33 @ 160 MHz) on hardware: Ed25519 measured **under 500 ms** (~18 KB image); SHA-256 still estimated at ~0.03 s/18 KB (not separately measured).
 >
 > **Note**: all timing figures in this document are **development-process measurements**. They vary with software version and toolchain changes and are **not a delivery specification**; re-measure on your own build.
@@ -155,9 +156,9 @@ For the reference implementation and commands see `doc/quilla-host-upgrader-guid
 |------|----------|------|
 | **QBOOT_CHECK** | Products with no 62443 secure-boot requirements, purely internal / development | Integrity only, **does not claim secure boot** |
 | **QBOOT_SEALED (SEALED mode)** | **SL1 / SL2** most product profiles: install-time authentication + per-boot integrity + locked SWD (RDP) | Satisfies "verify authenticity/integrity before boot"; prerequisite is RDP enabled |
-| **SECURE mode** | **SL3 / SL4** or stricter profiles: requires **re-verification on every boot**, or the threat model includes "runtime compromise / insufficient RDP trust" in scope | Provides per-cycle re-authentication, at the cost of ~20 s per power cycle (PY32F040xB, M0+/8 MHz; GD32F502VE under 500 ms (measured)) |
+| **SECURE mode** | **SL3 / SL4** or stricter profiles: requires **re-verification on every boot**, or the threat model includes "runtime compromise / insufficient RDP trust" in scope | Provides per-cycle re-authentication, at the cost of ~3.5 s per power cycle (PY32F040xB, M0+/48 MHz, measured reset→APP banner; GD32F502VE under 500 ms (measured)) |
 
-**Pragmatic advice**: the vast majority of end products can use **QBOOT_SEALED (SEALED mode + RDP on)** to meet SL1/SL2, with fast boot. Only when the target certification profile **explicitly requires re-verification on every boot** should you choose **QBOOT_SEC (SECURE mode)**, accepting the ~20 s per power cycle cost (PY32F040xB, M0+/8 MHz; GD32F502VE under 500 ms, measured). Regardless of mode, **the public key must be compiled into QBOOT** (standard practice for secure boot), and **the private key stays only at the signing station, never entering firmware / the repository**. Product builds may add `QUILLA_PRODUCTION_BUILD`; if the repository default public key is still compiled in, the header emits a compile warning reminding replacement (no longer hard-blocked with `#error`).
+**Pragmatic advice**: the vast majority of end products can use **QBOOT_SEALED (SEALED mode + RDP on)** to meet SL1/SL2, with fast boot. Only when the target certification profile **explicitly requires re-verification on every boot** should you choose **QBOOT_SEC (SECURE mode)**, accepting the ~3.5 s per power cycle cost (PY32F040xB, M0+/48 MHz, measured; GD32F502VE under 500 ms, measured). Regardless of mode, **the public key must be compiled into QBOOT** (standard practice for secure boot), and **the private key stays only at the signing station, never entering firmware / the repository**. Product builds may add `QUILLA_PRODUCTION_BUILD`; if the repository default public key is still compiled in, the header emits a compile warning reminding replacement (no longer hard-blocked with `#error`).
 
 ---
 

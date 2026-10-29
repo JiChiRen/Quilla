@@ -34,6 +34,8 @@
 #include "arm-def.h"
 #include "cpu.h"
 
+#include "py32f0xx_hal.h"
+
 #include "sys/clock.h"
 #include "sys/energest.h"
 #include "sys/etimer.h"
@@ -80,10 +82,63 @@ void wedge_probe_touch(unsigned int cp)
 
 static volatile uint64_t rt_ticks_startup = 0, rt_ticks_epoch = 0;
 
+/* PY32F040xB: switch the core from the power-on 8 MHz HSI to 48 MHz
+ * (HSI 24 MHz + PLL x2). FLASH needs one wait state above 24 MHz.
+ *
+ * This MUST run after HAL_Init() so that uwTickFreq is defined:
+ * HAL_RCC_ClockConfig() recomputes the SysTick reload from
+ * SystemCoreClock / uwTickFreq, and with uwTickFreq still 0 (HAL not
+ * initialised) that reload comes out wrong and the PLL path silently
+ * fails to take effect while SystemCoreClock is left claiming 48 MHz -
+ * which is exactly the previous bring-up bug (garbled UART). See
+ * doc/port-layout / change record for the root cause. */
+static void
+quilla_clock_set_48mhz(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+  /* Oscillator: HSI 24 MHz (internal RC, factory-trimmed from OTP 0x1FFF3220),
+   * PLL ON, x2 -> 48 MHz. HSE/LSI/LSE are not fitted on this board: leave OFF. */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE | RCC_OSCILLATORTYPE_HSI |
+                                    RCC_OSCILLATORTYPE_LSI | RCC_OSCILLATORTYPE_LSE;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSIDiv = RCC_HSI_DIV1;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_24MHz;
+  RCC_OscInitStruct.HSEState = RCC_HSE_OFF;
+  RCC_OscInitStruct.LSIState = RCC_LSI_OFF;
+  RCC_OscInitStruct.LSEState = RCC_LSE_OFF;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL2;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+    kern_raise(KERN_ERR_INTERNAL, KERN_MOD_CLOCK, __LINE__);
+    return;
+  }
+
+  /* Clock tree: PLL output as SYSCLK, no AHB/APB dividers -> 48 MHz everywhere. */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK) {
+    kern_raise(KERN_ERR_INTERNAL, KERN_MOD_CLOCK, __LINE__);
+    return;
+  }
+}
+
 kern_status_t
 clock_init(void)
 {
-  if(HAL_InitTick(TICK_INT_PRIORITY) != HAL_OK) {
+  /* HAL_Init() sets uwTickFreq = 1000 and arms the default 8 MHz SysTick.
+   * It MUST precede the 48 MHz switch (see quilla_clock_set_48mhz). */
+  HAL_Init();
+
+  quilla_clock_set_48mhz();
+
+  /* HAL_RCC_ClockConfig() already re-arms SysTick at 48 MHz / 1000 Hz; repeat
+   * the explicit init as a belt-and-suspenders re-arm and keep the error path. */
+  if (HAL_InitTick(TICK_INT_PRIORITY) != HAL_OK) {
     kern_raise(KERN_ERR_INTERNAL, KERN_MOD_CLOCK, __LINE__);
     return KERN_ERR_INTERNAL;
   }

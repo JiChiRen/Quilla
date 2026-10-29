@@ -1,10 +1,24 @@
 # Quilla
 
+<p align="center">
+  <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-3--clause%20BSD-brightgreen.svg" alt="3-clause BSD license"></a>
+  <a href="https://github.com/contiki-ng/contiki-ng"><img src="https://img.shields.io/badge/derived%20from-Contiki--NG-00599C.svg" alt="derived from Contiki-NG"></a>
+  <img src="https://img.shields.io/badge/MCU-PY32F040xB%20%7C%20GD32F502VE%20%7C%20CH32V305VB-orange.svg" alt="MCU: PY32F040xB (Cortex-M0+) | GD32F502VE (Cortex-M33) | CH32V305VB (QingKe V4F)">
+  <img src="https://img.shields.io/badge/secure%20boot-Ed25519%20(RFC%208032)-blueviolet.svg" alt="secure boot: Ed25519 (RFC 8032)">
+  <img src="https://img.shields.io/badge/MISRA--C-2012-informational.svg" alt="MISRA C:2012">
+</p>
+<!-- Repo-dependent badges below: replace `jichiren/quilla` with the real GitHub OWNER/REPO once the repo exists. -->
+<p align="center">
+  <a href="https://github.com/jichiren/quilla/actions"><img src="https://github.com/jichiren/quilla/actions/workflows/build.yml/badge.svg" alt="build"></a>
+  <a href="https://quilla.readthedocs.io"><img src="https://readthedocs.org/projects/quilla/badge/?version=latest" alt="documentation"></a>
+  <img src="https://img.shields.io/github/v/release/jichiren/quilla.svg" alt="latest release">
+</p>
+
 **中文** · [English](README.md)
 
 Quilla 是一套面向资源受限 MCU 的**轻量级、可安全启动、原生支持固件升级**的嵌入式操作系统，派生自 [Contiki-NG](https://github.com/contiki-ng/contiki-ng)。它在保留 Contiki 协程（protothread）进程模型简洁性的基础上，构建了双分区引导、安全启动与可观测性设施，目标是让产品级固件既能快速开发，又具备可控的安全属性。
 
-面向主流 RTOS 很少开箱支持的低成本 **Arm Cortex-M** 微控制器。目前已移植两类定位档位——**超低功耗入门档**（PY32F040xB，Cortex-M0+）与**带安全扩展的主流档**（GD32F502VE，Cortex-M33），覆盖了 Cortex-M 家族从低端到带 TrustZone 的主流区间；更多 Arm Cortex-M 型号与 RISC-V 内核仍需进一步适配。
+面向主流 RTOS 很少开箱支持的低成本 **Arm Cortex-M 与 RISC-V** 微控制器。目前已移植两类 Arm 定位档位——**超低功耗入门档**（PY32F040xB，Cortex-M0+）与**带安全扩展的主流档**（GD32F502VE，Cortex-M33），覆盖了 Cortex-M 家族从低端到带 TrustZone 的主流区间；另有一个 RISC-V 首版移植（CH32V305VB，WCH 青稞 QingKe V4F 内核，RV32IMAC）已用 GNU GCC12 / EIDE 全程构建通过，但**尚未上板实测**；同系列引脚与外围兼容的 CH32V307 带 1G MAC + 10M PHY，可快速衍生网络产品移植。更多 Arm Cortex-M 型号待适配。
 
 <p align="center">
   <img src="doc/images/quilla-demo.gif" alt="Quilla 演示：经串口烧录签名 APP——QBOOT 以 Ed25519 验签后引导新镜像" width="640">
@@ -32,8 +46,8 @@ Quilla 是一套面向资源受限 MCU 的**轻量级、可安全启动、原生
   - 程序流序列监控（kern-flow）：在 idle 循环布检查点，探测控制流故障，异常即转入安全态。
   - 配套独立看门狗（qwdt，带超时边界）与时钟交叉校验（qclk，检测 LSI 失锁）。
 
-- **规范化的工程布局与多 MCU 支持**
-  - 遵循 CMSIS-Pack 规范的目录布局；APP 代码通过统一公开 API 与 MCU 解耦，换芯无需改应用层。
+- **规范化的工程布局与多 MCU / 多架构支持**
+  - 遵循 CMSIS-Pack 规范的目录布局；APP 代码通过统一公开 API 与 MCU 解耦，换芯甚至跨 CPU 架构（Cortex-M ↔ RISC-V）都无需改动应用层。
 
 - **自愿对标安全相关标准（未送第三方认证）**
   - 开发过程自愿参照 IEC 61508 / ISO 26262 等安全相关标准的关键实践——变更受控、工具链锁定、MISRA C 机检、独立审查、可复现构建。
@@ -43,12 +57,25 @@ Quilla 是一套面向资源受限 MCU 的**轻量级、可安全启动、原生
 
 | MCU | 内核 / 主频 | Flash / SRAM | 状态 |
 | --- | --- | --- | --- |
-| PY32F040xB | Cortex-M0+ @ 8 MHz | 128 KB / 16 KB | 已上板实测 |
+| PY32F040xB | Cortex-M0+ @ 48 MHz | 128 KB / 16 KB | 已上板实测 |
 | GD32F502VE | Cortex-M33 @ 160 MHz | 512 KB / 64 KB | 已上板实测（QBOOT_CHECK / QBOOT_SEC） |
+| CH32V305VB | RISC-V / 青稞 QingKe V4F (RV32IMAC) @ 96 MHz | 128 KB / 32 KB | 编译验证（GCC12 / EIDE）；待上板 |
+
+### 为什么选这三颗芯片
+
+三个参考移植并非随意取样——它们都是**低成本、但侧重方向各异**的芯片，分别覆盖 Cortex-M / RISC-V 版图上的差异化定位档位；在量产级大宗商品 MCU 上提供安全启动与 OTA，并横跨 Cortex-M 与 RISC-V 证明安全/升级栈跨指令集可移植、不依赖单一厂商，正是 Quilla 的目标定位：
+
+- **PY32F040xB（Cortex-M0+）**——极低成本、货源广泛的入门级型号。其精简的外设与极小 SRAM 决定了最小可行 footprint，证明本系统在最小现实目标上也能跑，且让移植保持简单。
+- **GD32F502VE（Cortex-M33）**——带安全扩展的主流档。TrustZone-M、充裕的 Flash/SRAM 与广泛的市场接受度，使其成为安全启动与隔离叙事的自然参考，又无需跳到 exotic 或高价型号。
+- **CH32V305VB（WCH 青稞 QingKe V4F，RISC-V RV32IMAC）**——以 Cortex-M 的价位提供的通用 RISC-V。其在同等价位中最突出的优势是**低成本下的 USBHS 与工业级温度支持**；引脚与外围兼容的 CH32V307 进一步提供 1G MAC + 10M PHY，可快速衍生网络产品 SKU——因此一颗 RISC-V 网络型号只是快速的派生移植。
+
+三颗芯片均立足低成本、却各自覆盖一个差异化的产品方向，这正是它们被选为移植指南范例的原因。
 
 ## 快速开始
 
 用 GNU `arm-none-eabi` 工具链构建 bootloader（每 MCU 的 makefile 在 `user/<mcu>/EIDE/`，Keil 工程在 `user/<mcu>/MDK-ARM/`），再经串口烧录 APP：
+
+> RISC-V **CH32V305VB** 移植仅用 WCH RISC-V Embedded GCC12 工具链在 `user/ch32v305rb/EIDE/` 下构建（仅 EIDE/GNU，无 Keil）——见 [`doc/riscv-ch32v305-build.zh-CN.md`](doc/riscv-ch32v305-build.zh-CN.md)。
 
 ```bash
 # 通过串口烧录 APP 镜像（目标须已烧 QBOOT）

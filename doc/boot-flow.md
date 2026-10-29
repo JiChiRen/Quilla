@@ -268,7 +268,7 @@ The function is `while(1)`: **any code after it is unreachable**.
 
 ## 9. Cost and Footprint
 
-The cost of the boot path is a SHA-256 scan of the image (`image_len` bytes) plus one Ed25519 verification (only the 36-byte descriptor). Each runs exactly once — at **boot** and on the **SIGN frame** respectively — and neither runs during APP operation, so the real-time path is not burdened. SHA-256 time is **proportional to the actually written APP image size**: on PY32F040xB (Cortex-M0+ @ 8 MHz), a ~18 KB QAPP image takes about 0.6 s (≈ 30 KB/s). Ed25519 verification is independent of image size: about 20 s on PY32F040xB, and under 500 ms on GD32F502VE (M33 @ 160 MHz, measured). (Development-process figures; see the note in §9 below.)
+The cost of the boot path is a SHA-256 scan of the image (`image_len` bytes) plus one Ed25519 verification (only the 36-byte descriptor). Each runs exactly once — at **boot** and on the **SIGN frame** respectively — and neither runs during APP operation, so the real-time path is not burdened. SHA-256 time is **proportional to the actually written APP image size**: on PY32F040xB (Cortex-M0+ @ 48 MHz), a ~18 KB QAPP image takes about 0.1 s (≈ 180 KB/s, estimate). Ed25519 verification is independent of image size: about 3.3 s on PY32F040xB — the dominant term of the ≈3.5 s full-Ed25519 boot measured reset→APP banner on hardware at 48 MHz (vs ≈20 s at 8 MHz) — and under 500 ms on GD32F502VE (M33 @ 160 MHz, measured). (PY32F040xB timing measured on target at 48 MHz; see the note in §9 below.)
 
 Measured QBOOT footprint against the 24 KB budget:
 

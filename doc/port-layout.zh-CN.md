@@ -6,6 +6,11 @@
 - **关联**：`doc/cmsis-layout.md`（CMSIS-Pack 目录规范）
 - **适用范围**：`arch/cpu/arm/`（含其 `platform/`）与 `user/`
 
+> **RISC-V 移植（CH32V305VB，`ch32v305rb`）**：同样的三层边界适用于
+> `arch/cpu/riscv/`、`arch/platform/riscv/` 与 `user/ch32v305rb/`，但构建为
+> **仅 EIDE / GNU GCC12**（无 Keil），且启动镜像链在 `0x00000000` Flash 别名区，
+> 故整套分区方案为 `0x0` 基址而非 `0x0800` 基址。见 `doc/riscv-ch32v305-build.md`。
+
 ---
 
 ## 1. 目标
@@ -124,6 +129,8 @@ user/<mcu>/
 | `user/gd32f502ve/MDK-ARM/APP.uvprojx` | armclang V6.16 / armlink | `GD32F502VE` + `GigaDevice.GD32F50x_DFP.1.0.1`，`<Cpu>` 含 `CPUTYPE("Cortex-M33") DSP` **不含 FPU**，`FlashDriverDll` 用 `UL2V8M`（V8-M 专用），`TargetDllName` `SARMV8M.DLL -pCM33`，ROM `0x08007000/0x79000` |
 | `user/gd32f502ve/MDK-ARM/QBOOT.uvprojx` | 同上 | ROM `0x08000000/0x6000`，宏换 `-DQBOOT_BUILD` |
 | `user/gd32f502ve/EIDE/.eide/eide.json` | arm-none-eabi-gcc | `cpuType Cortex-M33` / `floatingPointHardware none` / `$float-abi-type soft`，scatter `gd32f502xE_app.ld` |
+
+逐步的 GNU/EIDE 构建（工具链、分区表、构建目标、烧录、实测尺寸）见 `doc/gd32f502ve-eide-build.md`（及 `doc/gd32f502ve-eide-build.zh-CN.md`）。
 
 **FPU 决定（重要）**：虽然在硬件能力上 `Dfpu=1`，但两侧都**不使用浮点**。
 一旦启用 `FPU3(SFPU)` + `-mfloat-abi=hard`，异常帧多出 S0–S15 + FPSCR 共 68 字节，

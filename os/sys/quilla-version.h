@@ -124,7 +124,16 @@
  * QUILLA_QBOOT_APP_START + QUILLA_APP_SECVER_OFF (see quilla-qboot-secure.c).
  * Equals 0x08007000 (APP_START) + 0x400. No 'U' suffix so the value can be
  * stringified into the armclang .ARM.__at_<addr> section name (see
- * quilla-app-secver.h). */
+ * quilla-app-secver.h).
+ *
+ * Overridable per build (#ifndef) so a port whose Flash base is not 0x08000000
+ * - e.g. the CH32V305VB, linked at the 0x00000000 alias - can set it to match
+ * its own QUILLA_QBOOT_APP_START + QUILLA_APP_SECVER_OFF. The QBOOT build
+ * cross-checks the value against that sum (see quilla-qboot-secure.c), so an
+ * override that disagrees with APP_START fails loudly instead of silently
+ * reading the wrong region. The Cortex-M ports leave it at the default. */
+#ifndef QUILLA_APP_SECVER_ADDR
 #define QUILLA_APP_SECVER_ADDR       0x08007400
+#endif
 
 #endif /* QUILLA_VERSION_H_ */

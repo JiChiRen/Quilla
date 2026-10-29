@@ -9,13 +9,10 @@
   <a href="https://github.com/contiki-ng/contiki-ng"><img src="https://img.shields.io/badge/derived%20from-Contiki--NG-00599C.svg" alt="derived from Contiki-NG"></a>
   <img src="https://img.shields.io/badge/MCU-PY32F040xB%20%7C%20GD32F502VE%20%7C%20CH32V305VB-orange.svg" alt="MCU: PY32F040xB (Cortex-M0+) | GD32F502VE (Cortex-M33) | CH32V305VB (QingKe V4F)">
   <img src="https://img.shields.io/badge/secure%20boot-Ed25519%20(RFC%208032)-blueviolet.svg" alt="secure boot: Ed25519 (RFC 8032)">
-  <img src="https://img.shields.io/badge/MISRA--C-2012-informational.svg" alt="MISRA C:2012">
+  <img src="https://img.shields.io/badge/MISRA--C:2012-coding%20guidelines-informational.svg" alt="MISRA C:2012 coding guidelines">
 </p>
-<!-- Repo-dependent badges below: replace `jichiren/quilla` with the real GitHub OWNER/REPO once the repo exists. -->
 <p align="center">
-  <a href="https://github.com/jichiren/quilla/actions"><img src="https://github.com/jichiren/quilla/actions/workflows/build.yml/badge.svg" alt="build"></a>
-  <a href="https://quilla.readthedocs.io"><img src="https://readthedocs.org/projects/quilla/badge/?version=latest" alt="documentation"></a>
-  <img src="https://img.shields.io/github/v/release/jichiren/quilla.svg" alt="latest release">
+  <a href="https://github.com/jichiren/Quilla/actions/workflows/build.yml"><img src="https://github.com/jichiren/Quilla/actions/workflows/build.yml/badge.svg" alt="CI build"></a>
 </p>
 
 **English** · [中文](README.zh-CN.md)

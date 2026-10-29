@@ -3,7 +3,7 @@
 # Quilla OS-Layer Public API Reference (for Application Developers)
 
 > This is the only OS-layer API manual an application developer needs in order to implement product features on the Quilla system.
-> Companion reading: `doc/qboot-app-architecture.md` (dual-partition architecture), `doc/programming/Processes-and-events.md`, and `doc/programming/Timers.md` (Contiki process and timer programming guides).
+> Companion reading: `doc/qboot-app-architecture.md` (dual-partition architecture), `doc/upstream/programming/Processes-and-events.md`, and `doc/upstream/programming/Timers.md` (Contiki process and timer programming guides).
 
 ## 1. Audience and Design Principles
 

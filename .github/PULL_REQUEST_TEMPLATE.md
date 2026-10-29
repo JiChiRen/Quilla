@@ -22,4 +22,4 @@
 - [ ] Builds cleanly (GNU `make` and/or Keil — see `doc/keil-qboot-app-build.md`)
 - [ ] No new compiler warnings introduced
 - [ ] Public docs updated if behavior or interface changed
-- [ ] Code style followed (`doc/project/Code-style.md`)
+- [ ] Code style followed (`doc/project/CONTIKI-Code-style.md`)

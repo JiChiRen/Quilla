@@ -3,7 +3,7 @@
 # Quilla OS 层公开 API 参考（面向应用开发者）
 
 > 本文档是应用开发者在 Quilla 系统上实现产品功能时唯一需要查阅的 OS 层 API 手册。
-> 配套阅读：`doc/qboot-app-architecture.md`（双分区架构）、`doc/programming/Processes-and-events.md` 与 `doc/programming/Timers.md`（Contiki 进程与定时器编程指南）。
+> 配套阅读：`doc/qboot-app-architecture.md`（双分区架构）、`doc/upstream/programming/Processes-and-events.md` 与 `doc/upstream/programming/Timers.md`（Contiki 进程与定时器编程指南）。
 
 ## 1. 读者对象与设计原则
 

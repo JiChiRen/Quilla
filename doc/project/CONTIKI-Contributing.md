@@ -71,5 +71,5 @@ For new platforms we have the following requirements:
 [github:about-pull-requests]: https://help.github.com/articles/about-pull-requests/
 [doc:code-style]: /doc/project/Code-style
 [doc:new-platforms]: #new-platforms
-[doc:platform-zoul]: /doc/platforms/zolertia/zoul
+[doc:platform-zoul]: /doc/upstream/platforms/zolertia/zoul
 [doc:development-cycle]: /doc/project/Development-cycle

@@ -310,7 +310,7 @@ Feel free to ask your porting questions in the "Developers" room on [gitter](htt
 [tutorial:hello-world]: /doc/tutorials/Hello,-World!
 [tutorial:shell]: /doc/tutorials/Shell
 [wiki-platforms]: /doc/platforms/index.rst
-[wiki-code-style]: /doc/project/Code-style
+[wiki-code-style]: /doc/project/CONTIKI-Code-style
 [wiki-contributing]: /doc/project/Contributing
 [doc:tsch]: TSCH-and-6TiSCH.md#porting-tsch-to-a-new-platform
 [doc:build-system]: /doc/getting-started/The-Contiki-NG-build-system

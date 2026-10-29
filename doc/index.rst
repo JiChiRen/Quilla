@@ -6,10 +6,10 @@
    :maxdepth: 5
    :hidden:
 
-   /doc/getting-started/index.rst
-   /doc/programming/index.rst
-   /doc/tutorials/index.rst
-   /doc/platforms/index.rst
+   /doc/upstream/getting-started/index.rst
+   /doc/upstream/programming/index.rst
+   /doc/upstream/tutorials/index.rst
+   /doc/upstream/platforms/index.rst
    /doc/project/index.rst
    /examples.rst
    /doxygen.rst

@@ -7,7 +7,7 @@ Quilla 是在 Contiki-NG 基础上扩展的安全关键嵌入式运行时，采�
 
 Quilla 由**机器人组件及光通信设计公司——深圳市积器仁信息有限公司（JiChiRen Info）**的开源办公室（OSPO）维护。它脱胎于积器仁量产项目中的信息安全固件系统——剥离业务内容、为开源重新适配 3 个 Demo MCU——作为对开源社区的回馈对外发布。同一套代码已用于工业项目（如远程信息安全组件）与消费电子（如密码门锁）。公司网站：[https://www.jichiren.com](https://www.jichiren.com)
 
-上游 Contiki-NG 的通用说明（构建系统、网络、教程、其它平台）见上游仓库；本仓库文档仅覆盖 Quilla 自身的架构、构建与交付流程。
+上游 Contiki-NG 的通用说明（构建系统、网络、教程、其它平台）已隔离至 [`doc/upstream/`](upstream/README.md)——它们讲的是 Contiki-NG，不是 Quilla；本仓库自有文档（直接位于 `doc/` 下的部分）仅覆盖 Quilla 自身的架构、构建与交付流程。
 
 ---
 

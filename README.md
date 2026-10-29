@@ -1,6 +1,10 @@
 # Quilla
 
 <p align="center">
+  <img src="doc/images/quilla-mark.svg" alt="Quilla" width="104" height="104">
+</p>
+
+<p align="center">
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-3--clause%20BSD-brightgreen.svg" alt="3-clause BSD license"></a>
   <a href="https://github.com/contiki-ng/contiki-ng"><img src="https://img.shields.io/badge/derived%20from-Contiki--NG-00599C.svg" alt="derived from Contiki-NG"></a>
   <img src="https://img.shields.io/badge/MCU-PY32F040xB%20%7C%20GD32F502VE%20%7C%20CH32V305VB-orange.svg" alt="MCU: PY32F040xB (Cortex-M0+) | GD32F502VE (Cortex-M33) | CH32V305VB (QingKe V4F)">
@@ -15,6 +19,10 @@
 </p>
 
 **English** · [中文](README.zh-CN.md)
+
+Quilla is maintained by the Open Source Program Office (OSPO) of **Shenzhen JiChiRen Information Co., Ltd. (JiChiRen Info)**, a robotics-components and optical-communication design company. It is derived from the secure-firmware subsystem used in JiChiRen's production projects: business-specific content was stripped out and three demo MCUs were re-adapted for open source, so the work can be given back to the community. The same codebase already powers industrial projects such as remote information-security modules and consumer-electronics products such as cryptographic smart locks.
+
+Company site: [https://www.jichiren.com](https://www.jichiren.com)
 
 Quilla is a lightweight, **secure-boot–capable, OTA-ready** embedded operating system for resource-constrained microcontrollers, derived from [Contiki-NG](https://github.com/contiki-ng/contiki-ng). It keeps the simplicity of Contiki's protothread process model and adds a dual-partition bootloader, **Ed25519 verified secure boot**, and observability facilities — so product firmware can be developed quickly *and* ship with controlled security properties.
 

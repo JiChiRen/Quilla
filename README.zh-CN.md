@@ -1,6 +1,10 @@
 # Quilla
 
 <p align="center">
+  <img src="doc/images/quilla-mark.svg" alt="Quilla" width="104" height="104">
+</p>
+
+<p align="center">
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-3--clause%20BSD-brightgreen.svg" alt="3-clause BSD license"></a>
   <a href="https://github.com/contiki-ng/contiki-ng"><img src="https://img.shields.io/badge/derived%20from-Contiki--NG-00599C.svg" alt="derived from Contiki-NG"></a>
   <img src="https://img.shields.io/badge/MCU-PY32F040xB%20%7C%20GD32F502VE%20%7C%20CH32V305VB-orange.svg" alt="MCU: PY32F040xB (Cortex-M0+) | GD32F502VE (Cortex-M33) | CH32V305VB (QingKe V4F)">
@@ -15,6 +19,10 @@
 </p>
 
 **中文** · [English](README.md)
+
+Quilla 由**机器人组件及光通信设计公司——深圳市积器仁信息有限公司（JiChiRen Info）**的开源办公室（OSPO）维护。它脱胎于积器仁量产项目中实际使用的信息安全固件系统：剥离业务内容后，为开源重新适配了 3 个 Demo MCU，作为对开源社区的回馈。同一套代码已用于远程信息安全组件等工业项目，以及密码门锁等消费电子项目。
+
+公司网站：[https://www.jichiren.com](https://www.jichiren.com)
 
 Quilla 是一套面向资源受限 MCU 的**轻量级、可安全启动、原生支持固件升级**的嵌入式操作系统，派生自 [Contiki-NG](https://github.com/contiki-ng/contiki-ng)。它在保留 Contiki 协程（protothread）进程模型简洁性的基础上，构建了双分区引导、安全启动与可观测性设施，目标是让产品级固件既能快速开发，又具备可控的安全属性。
 

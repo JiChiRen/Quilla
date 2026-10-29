@@ -4,6 +4,8 @@
 
 Quilla is a safety-oriented embedded runtime built on top of Contiki-NG, with a **QBOOT / QAPP dual-partition boot architecture**. This page is the documentation entry point, organized by reader role, and lists only the documents that live in this public repository.
 
+Quilla is maintained by the Open Source Program Office (OSPO) of **Shenzhen JiChiRen Information Co., Ltd. (JiChiRen Info)**, a robotics-components and optical-communication design company. It originated from the secure-firmware subsystem used in JiChiRen's production projects — business content stripped, three demo MCUs re-adapted for open source — and is released as a contribution back to the community. The same codebase already powers industrial projects (e.g. remote information-security modules) and consumer electronics (e.g. cryptographic smart locks). Company site: [https://www.jichiren.com](https://www.jichiren.com)
+
 General Contiki-NG material (build system, networking, tutorials, other platforms) remains the upstream project's; this repository's docs cover Quilla's own architecture, build, and delivery flow.
 
 ---

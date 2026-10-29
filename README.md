@@ -95,6 +95,8 @@ Entry point and reader navigation: [`doc/Home.md`](doc/Home.md) (English) ·
   `doc/quilla-host-upgrader-guide.md`, `doc/app-api-reference.md`
 - **Porters / APP developers** (MCU adaptation / calling OS APIs):
   `doc/port-layout.md`, `doc/cmsis-layout.md`, `doc/keil-qboot-app-build.md`
+- **Coding guidelines** (the MISRA C:2012 rule set applied to Quilla's own code, and what is out of scope):
+  [`doc/coding-guidelines.md`](doc/coding-guidelines.md)
 
 ## License & attribution
 

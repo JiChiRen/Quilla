@@ -46,4 +46,5 @@ Quilla 由**机器人组件及光通信设计公司——深圳市积器仁信�
 - 工程树按 MCU 划分：`user/<mcu>/{Src,Inc,EIDE,MDK-ARM}`。
 - 分区：QBOOT `0x08000000`–`0x08005FFF`；META `0x08006000`–`0x08006FFF`；APP `0x08007000` 起至 Flash 末（`APP_END` = Flash 末址，定义在 `arch/cpu/arm/<mcu>/soc.h` 的 `SOC_FLASH_END`）。分区布局由 `quilla-qboot-hal.h` 与每 MCU 的 `soc.h` 共同定义。
 - 本项目禁止动态内存分配。
+- 编码规范及其范围：`coding-guidelines.md`。
 - 许可证见根目录 `LICENSE.md`。

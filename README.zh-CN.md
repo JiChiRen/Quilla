@@ -102,6 +102,8 @@ python tools/quilla_ed25519_sign.py sign --key private.hex app.bin
   `doc/quilla-host-upgrader-guide.md`、`doc/app-api-reference.md`
 - **移植者 / 应用开发者**（MCU 适配 / APP 调用 OS API）：
   `doc/port-layout.md`、`doc/cmsis-layout.md`、`doc/keil-qboot-app-build.md`
+- **编码规范**（Quilla 自有代码遵循的 MISRA C:2012 规则与排除范围）：
+  [`doc/coding-guidelines.md`](doc/coding-guidelines.md)
 
 ## 许可与归属
 

@@ -45,4 +45,5 @@ Tooling deliverables are described in `tools/README.md`: the flashing tool and t
 - Project trees are split per MCU: `user/<mcu>/{Src,Inc,EIDE,MDK-ARM}`.
 - Partitions: QBOOT `0x08000000`–`0x08005FFF`; META `0x08006000`–`0x08006FFF`; APP from `0x08007000` to the end of flash (`APP_END` = last flash address, defined as `SOC_FLASH_END` in `arch/cpu/arm/<mcu>/soc.h`). The layout is defined jointly by `quilla-qboot-hal.h` and each MCU's `soc.h`.
 - Dynamic memory allocation is forbidden in this project.
+- Coding guidelines and their scope: `coding-guidelines.md`.
 - License: see `LICENSE.md` at the repository root.

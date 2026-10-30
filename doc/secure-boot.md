@@ -91,8 +91,10 @@ Their boot policies and applicable scenarios are as follows:
 
 The factory boot modes of the three variants are: **QBOOT_CHECK = CHECK mode**; **QBOOT_SEALED = SEALED mode**; **QBOOT_SEC = SECURE mode**. If further adjustment is needed, change the corresponding variant's `QUILLA_SB_BOOT_MODE` to `SECURE`.
 
-> SEALED's security relies on the chip read protection (RDP / locking SWD): if SWD is not locked, an attacker can rewrite the APP + manifest +
-> the seal in the META record, and the seal comparison is thereby bypassed. **For QBOOT_SEALED / QBOOT_SEC to claim security, RDP must be enabled in mass production.**
+> **Mass-production hard prerequisites for QBOOT_SEALED / QBOOT_SEC to claim security (Non-Bypassability):**
+> 1. **Lock the debug port (RDP / lock SWD):** if SWD is not locked, an attacker can rewrite the APP, manifest, and the seal in the META record, bypassing the seal comparison.
+> 2. **Do not expose any unauthenticated flashing interface:** in shipped SEALED / SEC builds, no firmware entry point that can write Flash *without* signature verification may be exposed — this includes the debug port (SWD / JTAG), DFU / ROM bootloader, and any serial / USB / on-board command that writes Flash directly. Any such unauthenticated write-to-Flash path bypasses the Ed25519 gate outright, rendering the variant name and verification policy meaningless. The only legitimate signed-upgrade path is the QIAP serial upgrade (§4), which writes and commits the manifest only after the SIGN frame passes verification.
+> 3. These requirements map to **NIST SP 800-193 §4.2.1.3 (Non-Bypassability)**: an authenticated update mechanism must prevent firmware from being bypassed or rolled back to an unauthorized state. **For QBOOT_SEALED / QBOOT_SEC to claim security, mass production must satisfy BOTH "lock the debug port" AND "do not expose any unauthenticated flashing interface"; locking SWD alone does not cover other entry points such as DFU or direct-write commands.**
 
 ### 2.5 Default Key Replacement (common to SEALED / SEC)
 
@@ -134,6 +136,8 @@ Regardless of variant, APP installation / recovery must go through the **QIAP se
 
 - **Keyed** (QBOOT_SEALED / QBOOT_SEC): END only ACKs; the manifest is written and committed only after the SIGN frame passes verification;
 - **Keyless** (QBOOT_CHECK): the END frame directly writes the integrity manifest and commits.
+
+For SEALED / SEC, this is also part of the §2.4 mass-production security prerequisite: beyond using QIAP, mass production must ensure no other direct-write-Flash entry point that bypasses the signature exists.
 
 For the reference implementation and commands see `doc/quilla-host-upgrader-guide.md` §10.
 

@@ -23,7 +23,7 @@ Quilla 由**机器人组件及光通信设计公司——深圳市积器仁信�
 
 Quilla 是一套面向资源受限 MCU 的**轻量级、可安全启动、原生支持固件升级**的嵌入式操作系统，派生自 [Contiki-NG](https://github.com/contiki-ng/contiki-ng)。它在保留 Contiki 协程（protothread）进程模型简洁性的基础上，构建了双分区引导、安全启动与可观测性设施，目标是让产品级固件既能快速开发，又具备可控的安全属性。
 
-面向主流 RTOS 很少开箱支持的低成本 **Arm Cortex-M 与 RISC-V** 微控制器。目前已移植两类 Arm 定位档位——**超低功耗入门档**（PY32F040xB，Cortex-M0+）与**带安全扩展的主流档**（GD32F502VE，Cortex-M33），覆盖了 Cortex-M 家族从低端到带 TrustZone 的主流区间；另有一个 RISC-V 首版移植（CH32V305VB，WCH 青稞 QingKe V4F 内核，RV32IMAC）已用 GNU GCC12 / EIDE 全程构建通过，但**尚未上板实测**；同系列引脚与外围兼容的 CH32V307 带 1G MAC + 10M PHY，可快速衍生网络产品移植。更多 Arm Cortex-M 型号待适配。
+Quilla 针对低资源微控制器上开源信息安全系统相对稀缺的现状，提供了一套内建安全启动与认证式 OTA 的轻量方案。目前已移植两类 Arm 定位档位——**超低功耗入门档**（PY32F040xB，Cortex-M0+）与**带安全扩展的主流档**（GD32F502VE，Cortex-M33），覆盖了 Cortex-M 家族从低端到带 TrustZone 的主流区间；另有一个 RISC-V 首版移植（CH32V305VB，WCH 青稞 QingKe V4F 内核，RV32IMAC）已用 GNU GCC12 / EIDE 全程构建通过，但**尚未上板实测**；同系列引脚与外围兼容的 CH32V307 带 1G MAC + 10M PHY，可快速衍生网络产品移植。更多 Arm Cortex-M 型号待适配。
 
 <p align="center">
   <img src="doc/images/quilla-demo.gif" alt="Quilla 演示：经串口烧录签名 APP——QBOOT 以 Ed25519 验签后引导新镜像" width="640">

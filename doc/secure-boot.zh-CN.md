@@ -91,8 +91,10 @@ APP 在启动期额外对 Flash 中的该区域做自检（`quilla_app_secver_se
 
 三个变体的出厂启动模式分别为：**QBOOT_CHECK = CHECK 模式**；**QBOOT_SEALED = SEALED 模式**；**QBOOT_SEC = SECURE 模式**。如需进一步调整，把对应变体的 `QUILLA_SB_BOOT_MODE` 改为 `SECURE` 即可。
 
-> SEALED 的安全性依赖芯片读保护（RDP / 锁 SWD）：SWD 不锁，攻击者可改写 APP、manifest 与
-> META 记录中的 seal，seal 比对即被绕过。**QBOOT_SEALED / QBOOT_SEC 要声称安全，量产必须开 RDP。**
+> **SEALED / SEC 声称安全的量产硬性前提（不可绕过性，Non-Bypassability）：**
+> 1. **锁调试口（RDP / 锁 SWD）**：SWD 不锁，攻击者可改写 APP、manifest 与 META 记录中的 seal，seal 比对即被绕过。
+> 2. **禁止暴露未认证烧录接口**：SEALED / SEC 出货时，任何"不经签名验签即可直接写 Flash"的固件入口都不得暴露——包括调试口（SWD / JTAG）、DFU / ROM bootloader，以及任何直写 Flash 的串口 / USB / 板内命令。只要存在一条绕过 Ed25519 闸门的未认证写 Flash 路径，secure boot 即被直接旁路，变体名与验签策略都形同虚设。合法签名升级只能走 QIAP 串口升级（§4），由 SIGN 帧验签通过后才写 manifest 并提交。
+> 3. 上述要求对应 **NIST SP 800-193 §4.2.1.3 的不可绕过性（Non-Bypassability）**：认证更新机制必须能阻止固件被旁路 / 回退到未授权状态。**QBOOT_SEALED / QBOOT_SEC 要声称安全，量产必须同时满足"锁调试口 + 禁暴露未认证烧录接口"；仅锁 SWD 不足以覆盖 DFU / 直写命令等其它入口。**
 
 ### 2.5 默认钥匙替换（SEALED / SEC 通用）
 
@@ -132,6 +134,8 @@ SEALED 与 SEC 两个变体编译进的是**同一把钥匙**：默认是随仓�
 
 - **带钥匙**（QBOOT_SEALED / QBOOT_SEC）：END 仅 ACK，由 SIGN 帧验签通过后才写 manifest 并提交；
 - **无钥匙**（QBOOT_CHECK）：END 帧直接写完整性 manifest 并提交。
+
+对 SEALED / SEC 变体，这同时也是 §2.4 量产安全前提的一部分：除走 QIAP 外，量产还须确保不存在其它可绕过签名的直写 Flash 入口。
 
 参考实现与命令见 `doc/quilla-host-upgrader-guide.md` §10。
 

@@ -17,7 +17,7 @@
 
 **English** · [中文](README.zh-CN.md)
 
-Quilla is maintained by the Open Source Program Office (OSPO) of **Shenzhen JiChiRen Information Co., Ltd. (JiChiRen Info)**, a robotics-components and optical-communication design company. It is derived from the secure-firmware subsystem used in JiChiRen's production projects: business-specific content was stripped out and three demo MCUs were re-adapted for open source, so the work can be given back to the community. The same codebase already powers industrial projects such as remote information-security modules and consumer-electronics products such as cryptographic smart locks.
+Quilla is maintained by the Open Source Program Office (OSPO) of **Shenzhen JiChiRen Information Technology Co., Ltd. (JiChiRen Info. Tech.)**, a robotics-components and optical-communication design company. It is derived from the secure-firmware subsystem used in JiChiRen's production projects: business-specific content was stripped out and three demo MCUs were re-adapted for open source, so the work can be given back to the community. The same codebase already powers industrial projects such as remote information-security modules and consumer-electronics products such as cryptographic smart locks.
 
 Company site: [https://www.jichiren.com](https://www.jichiren.com)
 

@@ -14,16 +14,14 @@
 *.s37 binary
 
 # --- Quilla ---------------------------------------------------------------
-# Git hooks have no extension, so `text=auto` above classifies them as text and a
-# Windows checkout converts them to CRLF. The shebang then reads "#!/bin/sh<CR>",
-# the interpreter lookup fails, and the hook silently stops running. Pin LF.
-.githooks/*  text eol=lf
+# Shell tooling is pinned to LF: `text=auto` above would otherwise let a Windows
+# checkout convert the scripts to CRLF, and "#!/bin/sh<CR>" makes the interpreter
+# lookup fail.
 tools/*.sh   text eol=lf
 
 # Python tooling is pinned to LF so line-ending flips never show up as unrelated
 # diffs on checkout (the shebang and tooling expect LF).
 *.py               text eol=lf
-.workbuddy/tools/* text eol=lf
 
 # Same reasoning for the control files themselves: their content is compared by
 # tooling, not read for display.

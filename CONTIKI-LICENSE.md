@@ -1,3 +1,15 @@
+# Upstream license notice (Contiki-NG)
+
+This is the BSD-3-Clause license text that Contiki-NG distributes its code under,
+reproduced verbatim. Upstream leaves the copyright-holder line as a placeholder;
+the real copyright notices (Swedish Institute of Computer Science, Contiki-NG
+contributors, and individual authors) are retained unchanged in the header of
+each derived source file.
+
+Quilla's own code is licensed separately — see [LICENSE.md](LICENSE.md).
+
+---
+
 Copyright (c) (Year), (Name of copyright holder)
 All rights reserved.
 

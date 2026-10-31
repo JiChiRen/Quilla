@@ -1,0 +1,241 @@
+{
+  "name": "Project",
+  "type": "RISC-V",
+  "dependenceList": [],
+  "srcDirs": [],
+  "virtualFolder": {
+    "name": "<virtual_root>",
+    "files": [],
+    "folders": [
+      {
+        "name": "Application/User",
+        "files": [
+          {
+            "path": "../Src/main.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "arch/ch32v305rb",
+        "files": [
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/system_ch32v30x.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/Core/core_riscv.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/clock.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/rtimer-arch.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/lpm.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/soc.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/shellport.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/quilla-qboot-hal.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "arch/dev",
+        "files": [
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/dev/watchdog.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/dev/qwdt.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/dev/qclk.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "CH32V305_Peripherals",
+        "files": [
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/Peripheral/src/ch32v30x_rcc.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/Peripheral/src/ch32v30x_gpio.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/Peripheral/src/ch32v30x_usart.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/Peripheral/src/ch32v30x_dma.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/Peripheral/src/ch32v30x_tim.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/Peripheral/src/ch32v30x_flash.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/Peripheral/src/ch32v30x_iwdg.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/Peripheral/src/ch32v30x_rtc.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/Peripheral/src/ch32v30x_pwr.c"
+          },
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/Peripheral/src/ch32v30x_bkp.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "os/sys",
+        "files": [
+          {
+            "path": "../../../os/sys/atomic.c"
+          },
+          {
+            "path": "../../../os/sys/autostart.c"
+          },
+          {
+            "path": "../../../os/sys/ctimer.c"
+          },
+          {
+            "path": "../../../os/sys/etimer.c"
+          },
+          {
+            "path": "../../../os/sys/mutex.c"
+          },
+          {
+            "path": "../../../os/sys/process.c"
+          },
+          {
+            "path": "../../../os/sys/kern-guard.c"
+          },
+          {
+            "path": "../../../os/sys/kern-nomalloc.c"
+          },
+          {
+            "path": "../../../os/sys/kern-stack.c"
+          },
+          {
+            "path": "../../../os/sys/kern-flow.c"
+          },
+          {
+            "path": "../../../os/sys/process-mutex.c"
+          },
+          {
+            "path": "../../../os/sys/rtimer.c"
+          },
+          {
+            "path": "../../../os/sys/stimer.c"
+          },
+          {
+            "path": "../../../os/sys/timer.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "os/lib",
+        "files": [
+          {
+            "path": "../../../os/lib/assert.c"
+          },
+          {
+            "path": "../../../os/lib/crc16.c"
+          },
+          {
+            "path": "../../../os/lib/list.c"
+          },
+          {
+            "path": "../../../os/lib/memb.c"
+          },
+          {
+            "path": "../../../os/lib/ringbuf.c"
+          },
+          {
+            "path": "../../../os/lib/ringbufindex.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "arch/cpu/riscv",
+        "files": [
+          {
+            "path": "../../../arch/cpu/riscv/int-master.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "os/services",
+        "files": [
+          {
+            "path": "../../../os/services/shell/quilla-shell.c"
+          },
+          {
+            "path": "../../../os/services/quilla-qboot/quilla-qboot-flag.c"
+          },
+          {
+            "path": "../../../os/services/quilla-qboot/quilla-qboot-meta.c"
+          },
+          {
+            "path": "../../../os/services/quilla-qboot/quilla-app-qboot.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "arch/platform",
+        "files": [
+          {
+            "path": "../../../arch/platform/riscv/ch32v305rb/platform.c"
+          }
+        ],
+        "folders": []
+      },
+      {
+        "name": "Startup",
+        "files": [
+          {
+            "path": "../../../arch/cpu/riscv/ch32v305rb/Startup/startup_ch32v30x_D8C.S"
+          }
+        ],
+        "folders": []
+      }
+    ]
+  },
+  "toolchain": {
+    "name": "RISC-V Embedded GCC12",
+    "prefix": "riscv-wch-elf-",
+    "gcc": {
+      "arch": {
+        "arch": "rv32imac",
+        "abi": "ilp32",
+        "fpu": "none"
+      }
+    }
+  },
+  "targets": {
+    "QAPP": {
+      "makefile": "Makefile",
+      "buildDir": "QAPP"
+    },
+    "QBOOT": {
+      "makefile": "Makefile.qboot",
+      "buildDir": "QBOOT_CHECK"
+    }
+  },
+  "note": "Authoritative build is the GNU Makefiles in this directory (make -f Makefile / Makefile.qboot[.sealed|.sec]); the toolchain bin dir is supplied via GCC_PATH or PATH and is intentionally not recorded here. See the compile chapter of doc/."
+}

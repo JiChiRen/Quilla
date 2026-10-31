@@ -1,0 +1,19 @@
+# EIDE local / user files
+/.vscode/launch.json
+/.settings
+/.eide/log
+/.eide.usr.ctx.json
+
+# eide template
+*.ept
+*.eide-template
+
+# build outputs (GNU Makefile targets)
+/QAPP/
+/QBOOT_CHECK/
+/QBOOT_SEALED/
+/QBOOT_SEC/
+*.o
+*.d
+*.lst
+*.map

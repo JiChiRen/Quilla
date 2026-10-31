@@ -1,0 +1,92 @@
+*.a
+*.bin
+*.hex
+*.map
+*.png
+*.log
+*.elf
+*.zip
+*.d
+*.o
+*.e
+*.ihex
+*.pyc
+*~
+build/*
+Makefile.target
+Makefile.*.defines
+tools/doxygen/html
+tools/readthedocs/_build
+tools/readthedocs/doc
+tools/readthedocs/examples
+patches-*
+tools/serial-io/tunslip6
+tools/serial-io/serialdump
+serialdump-*
+build
+tools/coffee-manager/build/
+tools/coffee-manager/coffee.jar
+COOJA.testlog
+
+# do not ignore images in documentation
+!tools/readthedocs/**/*.png
+!doc/**/*.png
+
+# other nRF52 build artifacts
+*.jlink
+
+#test artifacts
+*.testlog
+*.scriptlog
+*.coojalog
+*.summary
+*.err
+summary
+tests/18-coap-lwm2m/Californium.properties
+tests/18-coap-lwm2m/leshan-server-demo*.jar
+
+# --- Quilla / PY32F040xB: Keil & EIDE build outputs ---
+*.axf
+*.crf
+*.dep
+*.lnp
+*.tra
+*.lst
+*.uo
+*.scvd
+*.bak
+*.orig
+*.pyo
+**/*_Output/
+Objects/
+Listings/
+DebugConfig/
+.settings/
+DebugFlash/
+Flash/
+Debug/
+Release/
+__pycache__/
+.DS_Store
+Thumbs.db
+
+# --- Quilla: host-side build and linker output ---
+*.exe
+*.out
+*.pdb
+
+# --- Quilla: Keil / EIDE generated build outputs (NOT source; regenerated on
+#     build). They must never be committed -- only the project definitions
+#     (*.uvprojx), Makefiles, linker scripts and sources are tracked.
+**/MDK-ARM/Output/
+**/MDK-ARM/RTE/
+*.uvoptx
+*.uvprojx.pre-osboot
+ExtDll.iex
+
+# --- Quilla: developer TEST keys under tools/_keytest/ ARE tracked on purpose
+#     so a fresh clone is out-of-the-box usable (build + boot + sign all work
+#     immediately). They are TEST keys only; the production key is generated
+#     offline and never committed (see tools/_keytest/README.md). The global
+#     *.hex above would otherwise swallow them, so un-ignore just this dir.
+!tools/_keytest/*.hex

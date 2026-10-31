@@ -1,0 +1,210 @@
+##########################################################################################################################
+# Quilla QBOOT_SEALED (bootloader) build for GD32F502VE — Makefile.qboot.sealed
+#
+# SECURE-BOOT DEVELOPMENT variant. Mirrors the Keil "QBOOT_SEALED" target:
+# identical source closure and link script (gd32f502xE_qboot.ld, 64K), but the
+# Ed25519 TEST public key is compiled in so signature verification is actually
+# active at boot (SEALED mode, the default).
+#
+# Difference vs Makefile.qboot (the CHECK / integrity-only build):
+#   -DQBOOT_BUILD  ->  -DQBOOT_BUILD -DQUILLA_QBOOT_DEFAULT_KEY
+#                       -DQUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_SEALED
+#                       -DQUILLA_QBOOT_VARIANT_STR="SEALED"
+# (QUILLA_SB_BOOT_MODE defaults to SEALED already, so the explicit define is
+#  redundant but kept 1:1 with the Keil target for clarity.)
+#
+# DEVELOPMENT ONLY: this carries the in-repo TEST key (tools/_keytest). Do NOT
+# ship it. For production use Makefile.qboot.sec (QBOOT_SEC) with a real key.
+#
+# Build:  make -f Makefile.qboot.sealed  (produces ./QBOOT_SEALED/QBOOT_SEALED.{elf,hex,bin})
+##########################################################################################################################
+
+######################################
+# target
+######################################
+TARGET = QBOOT_SEALED
+
+
+######################################
+# building variables
+######################################
+# debug build? (0 = no -g, smallest artifact)
+DEBUG = 0
+# optimization: size for a bootloader
+OPT = -Os
+
+
+#######################################
+# paths
+#######################################
+# Build path
+BUILD_DIR = QBOOT_SEALED
+
+
+######################################
+# source
+######################################
+# C sources (minimal closure — see header note)
+C_SOURCES =  \
+../../../arch/cpu/arm/CMSIS/Device/GigaDevice/GD32F50x/Source/system_gd32f50x.c \
+../../../arch/cpu/arm/gd32f502ve/clock.c \
+../../../arch/cpu/arm/gd32f502ve/shellport.c \
+../../../arch/cpu/arm/gd32f502ve/qboot-main.c \
+../../../arch/cpu/arm/gd32f502ve/quilla-qboot-hal.c \
+../../../os/services/quilla-qboot/quilla-qiap.c \
+../../../os/services/quilla-qboot/quilla-qboot-flag.c \
+../../../os/services/quilla-qboot/quilla-qboot-meta.c \
+../../../os/services/quilla-qboot/quilla-ed25519.c \
+../../../os/services/quilla-qboot/quilla-qboot-secure.c \
+../../../os/lib/sha256.c \
+../../../os/lib/sha512.c \
+../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_rcu.c \
+../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_gpio.c \
+../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_usart.c \
+../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_dma.c \
+../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_fmc.c \
+../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_misc.c \
+../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Source/gd32f50x_syscfg.c \
+../../../os/sys/process.c \
+../../../os/sys/kern-guard.c \
+../../../os/sys/kern-nomalloc.c \
+../../../os/sys/kern-stack.c \
+../../../os/sys/kern-flow.c \
+../../../os/sys/etimer.c \
+../../../os/sys/timer.c \
+../../../os/sys/atomic.c \
+../../../os/lib/crc16.c \
+../../../os/lib/list.c \
+../../../os/lib/memb.c \
+../../../os/lib/ringbuf.c \
+../../../os/lib/ringbufindex.c \
+../../../os/lib/assert.c \
+../../../arch/cpu/arm/int-master.c \
+../../../os/services/shell/quilla-shell.c
+
+
+# ASM sources
+ASM_SOURCES =  \
+../../../arch/cpu/arm/CMSIS/Device/GigaDevice/GD32F50x/Source/GCC/startup_gd32f50x.S
+
+
+#######################################
+# binaries
+#######################################
+PREFIX = arm-none-eabi-
+ifdef GCC_PATH
+CC = $(GCC_PATH)/$(PREFIX)gcc
+AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
+CP = $(GCC_PATH)/$(PREFIX)objcopy
+SZ = $(GCC_PATH)/$(PREFIX)size
+else
+CC = $(PREFIX)gcc
+AS = $(PREFIX)gcc -x assembler-with-cpp
+CP = $(PREFIX)objcopy
+SZ = $(PREFIX)size
+endif
+HEX = $(CP) -O ihex
+BIN = $(CP) -O binary -S
+
+#######################################
+# CFLAGS
+#######################################
+CPU = -mcpu=cortex-m33
+
+MCU = $(CPU) -mthumb $(FPU) $(FLOAT-ABI)
+
+AS_DEFS =
+
+# The QUILLA_QBOOT_* values must be identical to the ones in Makefile.
+C_DEFS =  \
+-DGD32F50X\
+-DGD32F502\
+-DQBOOT_BUILD\
+-DQUILLA_QBOOT_DEFAULT_KEY\
+-DQUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_SEALED\
+-DQUILLA_QBOOT_VARIANT_STR=\"SEALED\"\
+-DQUILLA_QBOOT_APP_START=0x08007000U\
+-DQUILLA_QBOOT_FLAG_ADDR=0x08006000U\
+-DQUILLA_QBOOT_PAGE_SIZE=2048U\
+-DQUILLA_QBOOT_RAM_START=0x20000000U\
+-DQUILLA_QBOOT_RAM_SIZE=0x00010000U
+
+AS_INCLUDES =
+
+C_INCLUDES =  \
+-I../Inc \
+-I../../../os \
+-I../../../os/sys \
+-I../../../os/lib \
+-I../../../arch/cpu/arm \
+-I../../../arch/cpu/arm/gd32f502ve \
+-I../../../arch/platform/arm \
+-I../../../arch/platform/arm/gd32f502ve \
+-I../../../os/services/shell \
+-I../../../os/services/quilla-qboot \
+-I../../../arch/cpu/arm/vendor/GigaDevice/GD32F50x_Firmware_Library/GD32F50x_standard_peripheral/Include \
+-I../../../arch/cpu/arm/CMSIS/Device/GigaDevice/GD32F50x/Include \
+-I../../../arch/cpu/arm/CMSIS/Core/Include
+
+ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
+
+CFLAGS += $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
+
+ifeq ($(DEBUG), 1)
+CFLAGS += -g -gdwarf-2
+endif
+
+CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
+
+
+#######################################
+# LDFLAGS
+#######################################
+LDSCRIPT = ../../../arch/cpu/arm/CMSIS/Device/GigaDevice/GD32F50x/Source/GCC/Ld/gd32f502xE_qboot.ld
+
+LIBS = -lc -lm -lnosys
+LIBDIR =
+LDFLAGS = $(MCU) -specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections -Wl,--no-warn-rwx-segments
+
+all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).hex $(BUILD_DIR)/$(TARGET).bin
+
+
+#######################################
+# build the application
+#######################################
+OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
+vpath %.c $(sort $(dir $(C_SOURCES)))
+OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.S=.o)))
+vpath %.S $(sort $(dir $(ASM_SOURCES)))
+
+$(BUILD_DIR)/%.o: %.c Makefile.qboot.sealed | $(BUILD_DIR)
+	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
+
+$(BUILD_DIR)/%.o: %.S Makefile.qboot.sealed | $(BUILD_DIR)
+	$(AS) -c $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile.qboot.sealed
+	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
+	$(SZ) $@
+
+$(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
+	$(HEX) $< $@
+
+$(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
+	$(BIN) $< $@
+
+$(BUILD_DIR):
+	mkdir -p $@
+
+#######################################
+# clean up
+#######################################
+clean:
+	-rm -fR $(BUILD_DIR)
+
+#######################################
+# dependencies
+#######################################
+-include $(wildcard $(BUILD_DIR)/*.d)
+
+# *** EOF ***

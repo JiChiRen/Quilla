@@ -1,0 +1,29 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text=auto whitespace=trailing-space
+
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout.
+*.c text
+*.h text
+*.java text
+
+# Denote all files that are truly binary and should not be modified.
+*.png binary
+*.jpg binary
+*.ihex binary
+*.s37 binary
+
+# --- Quilla ---------------------------------------------------------------
+# Shell tooling is pinned to LF: `text=auto` above would otherwise let a Windows
+# checkout convert the scripts to CRLF, and "#!/bin/sh<CR>" makes the interpreter
+# lookup fail.
+tools/*.sh   text eol=lf
+
+# Python tooling is pinned to LF so line-ending flips never show up as unrelated
+# diffs on checkout (the shebang and tooling expect LF).
+*.py               text eol=lf
+
+# Same reasoning for the control files themselves: their content is compared by
+# tooling, not read for display.
+.gitignore         text eol=lf
+.gitattributes     text eol=lf

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none" role="img" aria-label="Quilla icon">
+  <title>Quilla</title>
+  <desc>Compact Quilla mark for favicon use: the hull cross-section with the waterline, bilge keels dropped for legibility below 24 px and the frame strokes thickened.</desc>
+  <defs>
+    <linearGradient id="qf" x1="34" y1="90" x2="96" y2="36" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset=".55" stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="31" fill="#06182e"/>
+  <g transform="translate(32 32) scale(0.6) translate(-64 -65)">
+    <g stroke="url(#qf)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M28 34 C30 68 46 86 64 90 C82 86 98 68 100 34" stroke-width="9"/>
+      <path d="M38 62 H90" stroke-width="4.5"/>
+    </g>
+    <circle cx="64" cy="90" r="7" fill="url(#qf)"/>
+  </g>
+</svg>

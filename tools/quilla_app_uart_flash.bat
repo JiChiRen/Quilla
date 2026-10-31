@@ -33,7 +33,17 @@ setlocal
 if "%~1"=="" goto :usage
 
 REM Operator can pre-set PY to another interpreter (needs pyserial).
-if not defined PY set "PY=C:\Users\A\.workbuddy\binaries\python\envs\default\Scripts\python.exe"
+if defined PY goto :py_ready
+REM Auto-detect: prefer the Windows `py` launcher, then `python` on PATH.
+REM Each probe is a standalone statement -- no parenthesised block, see the
+REM block-parser note further down for why.
+for /f "delims=" %%P in ('py -3 -c "import sys;print(sys.executable)" 2^>nul') do set "PY=%%P"
+if defined PY goto :py_ready
+for /f "delims=" %%P in ('python -c "import sys;print(sys.executable)" 2^>nul') do set "PY=%%P"
+if defined PY goto :py_ready
+echo [X] Python 3 not found. Install Python 3 (with pyserial), or set PY=^<python.exe^>
+exit /b 1
+:py_ready
 
 REM Normalize ROOT to a clean absolute path (no trailing slash, no "..").
 REM This matters: cmd's `if exist` is unreliable on paths that contain ".."
@@ -188,7 +198,7 @@ set "EXTRA="
 if not "%KEYARG%"=="" set "EXTRA=--key "%KEYABS%""
 if not "%VERARG%"=="" set "EXTRA=%EXTRA% --version %VERARG%"
 if not "%KEYARG%"=="" echo [*] secure boot: SIGN frame via key %KEYABS% (version %VERARG%)
-"%PY%" "%ROOT%	ools\quilla_host_upgrader.py" %PORT% "%BIN%" -b %BAUD% %EXTRA%
+"%PY%" "%ROOT%\tools\quilla_host_upgrader.py" %PORT% "%BIN%" -b %BAUD% %EXTRA%
 set "RC=%ERRORLEVEL%"
 if not "%RC%"=="0" (
   echo [X] upgrader exited with %RC%

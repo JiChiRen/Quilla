@@ -28,6 +28,21 @@ make -C user/ch32v305rb/EIDE -f Makefile.qboot        GCC_PATH=...
 
 > The directory name contains a space ("RISC-V Embedded GCC12"); the Makefiles quote `$(CC)/$(AS)/$(CP)/$(SZ)` so this works. A `PATH` without spaces avoids the issue entirely.
 
+### CI verification (what a green run does and does not mean)
+
+GitHub Actions cannot run the WCH toolchain — it is not redistributable — so the
+`firmware-riscv` job builds this port with a stock `riscv-none-elf` toolchain
+(xPack GCC 13.2) after rewriting the single vendor-only construct in place:
+
+```
+__attribute__((interrupt("WCH-Interrupt-fast")))   ->   __attribute__((interrupt("machine")))
+```
+
+That job catches generic regressions in shared code — syntax, types, missing
+symbols, linker-script drift. It is **not** evidence that the image boots: the
+fast-interrupt entry path only exists with the WCH toolchain, and bring-up
+remains open (§8). A green CI run says nothing about on-target status.
+
 ## 2. Device
 
 CH32V305VB = WCH **CH32V30x_D8C** (RV32IMAC, QingKe V4F-class core with the WCH PFIC interrupt controller). It is a mainstream, general-purpose RISC-V offered at a Cortex-M price; its headline industrial features are **USBHS and industrial-temperature support at low cost**, and the pin- and peripheral-compatible CH32V307 in the same CH32V30x family adds a 1 G MAC + 10 M PHY for networked products. **128 KiB Flash linked at the `0x00000000` alias**, 32 KiB SRAM at `0x20000000`. The build define is `CH32V30x_D8C`.

@@ -7,11 +7,16 @@
 # this repository:
 #
 #   firmware-gnu : builds the GNU (arm-none-eabi-gcc) firmware for every
-#                  supported MCU (PY32F040xB, GD32F502VE) — QBOOT (CHECK and
+#                  supported Arm MCU (PY32F040xB, GD32F502VE) — QBOOT (CHECK and
 #                  the default SEALED secure-boot variant) and QAPP. This is the
 #                  only firmware path that can run on public CI; the Keil /
 #                  armclang (Cortex-M33 secure-boot) builds require a Keil
 #                  license and are verified on a developer machine instead.
+#
+#   firmware-riscv : builds the CH32V305 port with a stock riscv-none-elf
+#                  toolchain, after rewriting the one WCH-only construct in the
+#                  sources. Catches generic regressions in shared code; does not
+#                  verify the WCH fast-interrupt path (see the job's comment).
 #
 #   host-tools   : runs the Python host-side tooling self-tests — the Ed25519
 #                  signing utility and the serial OTA upgrader shipped to
@@ -58,6 +63,63 @@ jobs:
 
       - name: Build QAPP
         run: make -C user/${{ matrix.mcu }}/EIDE
+
+  firmware-riscv:
+    # The CH32V305 port is built with the WCH "RISC-V Embedded GCC12" toolchain,
+    # whose fast-interrupt entry relies on a vendor-only attribute that mainline
+    # GCC rejects. That toolchain is not redistributable, so CI cannot use it.
+    #
+    # Instead this job builds the same tree with a stock riscv-none-elf toolchain
+    # after rewriting that single vendor construct in place. It catches generic
+    # regressions in shared code -- syntax, types, missing symbols, linker-script
+    # drift -- but does NOT verify the WCH fast-interrupt entry path itself, so a
+    # green run here is not evidence that the RISC-V image boots.
+    name: Firmware (RISC-V, CH32V305)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install RISC-V toolchain
+        run: |
+          set -euo pipefail
+          url=https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v13.2.0-2/xpack-riscv-none-elf-gcc-13.2.0-2-linux-x64.tar.gz
+          curl -fsSL "$url" -o /tmp/rv.tar.gz
+          mkdir -p "$RUNNER_TEMP/rv"
+          tar -xzf /tmp/rv.tar.gz -C "$RUNNER_TEMP/rv" --strip-components=1
+          echo "$RUNNER_TEMP/rv/bin" >> "$GITHUB_PATH"
+
+      - name: Toolchain version
+        run: riscv-none-elf-gcc --version | head -1
+
+      - name: Rewrite the WCH-only interrupt attribute
+        run: |
+          # __attribute__((interrupt("WCH-Interrupt-fast"))) is a WCH extension;
+          # mainline GCC rejects the string outright. Rewrite it to the standard
+          # machine-mode form so the stock toolchain can compile the tree.
+          # CI-only edit: the shipped image is still built with WCH GCC12.
+          files=$(grep -rl 'WCH-Interrupt-fast' arch/cpu/riscv || true)
+          if [ -z "$files" ]; then
+            echo "error: no WCH-Interrupt-fast attribute found under arch/cpu/riscv." >&2
+            echo "       The port no longer needs this rewrite -- delete this step." >&2
+            exit 1
+          fi
+          echo "rewriting:"
+          echo "$files" | sed 's/^/  /'
+          # shellcheck disable=SC2086
+          sed -i 's/interrupt("WCH-Interrupt-fast")/interrupt("machine")/g' $files
+
+      - name: Build QBOOT (CHECK variant)
+        run: make -C user/ch32v305rb/EIDE -f Makefile.qboot PREFIX=riscv-none-elf-
+
+      - name: Build QBOOT (SEALED variant)
+        run: make -C user/ch32v305rb/EIDE -f Makefile.qboot.sealed PREFIX=riscv-none-elf-
+
+      - name: Build QBOOT (SEC variant)
+        run: make -C user/ch32v305rb/EIDE -f Makefile.qboot.sec PREFIX=riscv-none-elf-
+
+      - name: Build QAPP
+        run: make -C user/ch32v305rb/EIDE PREFIX=riscv-none-elf-
 
   host-tools:
     name: Host tools self-test

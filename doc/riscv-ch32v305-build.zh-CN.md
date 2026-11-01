@@ -27,6 +27,20 @@ make -C user/ch32v305rb/EIDE -f Makefile.qboot        GCC_PATH=...
 
 > 目录名含空格（"RISC-V Embedded GCC12"）；Makefile 已对 `$(CC)/$(AS)/$(CP)/$(SZ)` 加引号，故可正常工作。用无空格的 `PATH` 可完全避开。
 
+### CI 验证：绿灯意味着什么、不意味着什么
+
+GitHub Actions 无法运行 WCH 工具链——它不可再分发——所以 `firmware-riscv` 这个
+job 用标准 `riscv-none-elf` 工具链（xPack GCC 13.2）构建本移植，构建前先把唯一一处
+厂商专有写法就地改写：
+
+```
+__attribute__((interrupt("WCH-Interrupt-fast")))   ->   __attribute__((interrupt("machine")))
+```
+
+该 job 捕获的是共用代码的通用回归——语法、类型、符号缺失、链接脚本漂移。它**不**能
+证明镜像能跑：快速中断入口路径只在 WCH 工具链下存在，且 bring-up 仍未完成（§8）。
+CI 绿灯与实板状态无关。
+
 ## 2. 器件
 
 CH32V305VB = WCH **CH32V30x_D8C**（RV32IMAC，青稞 QingKe V4F 内核 + WCH PFIC 中断控制器）。它是以 Cortex-M 价位提供的通用 RISC-V；最突出的工业特性是**同等低价位下的 USBHS 与工业级温度支持**，引脚与外围兼容的 CH32V307 同属 CH32V30x 家族，额外提供 1G MAC + 10M PHY，可快速衍生网络产品。**128 KiB Flash 链在 `0x00000000` 别名区**，32 KiB SRAM @ `0x20000000`。构建宏为 `CH32V30x_D8C`。

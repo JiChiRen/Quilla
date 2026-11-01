@@ -59,4 +59,4 @@ ipso_sensor_add(&temp_sensor);
 ```
 
 Read the LWM2M and IPSO object tutorial for instructions on how to test LWM2M at:
-[LWM2M and IPSO Object Tutorial](/doc/tutorials/LWM2M-and-IPSO-Objects)
+[LWM2M and IPSO Object Tutorial](/doc/upstream/tutorials)/LWM2M-and-IPSO-Objects)

@@ -2,7 +2,7 @@
 
 We will continue here from our `hello-world` example (see [tutorial:hello-world]) with shell enabled (see [tutorial:shell]). We will look at IPv6 communication (see [doc:ipv6]). Note that it is possible to ping even a native node: when running it with sufficient permissions (e.g. `sudo`), native nodes start a `tun` interface and can be pinged. Here we look at pinging hardware nodes. Compile the project and upload it to both nodes (either by not specifying `MOTES` at all, which will upload to all, or by listing both tty devices e.g. with `MOTES=/dev/ttyUSB0 /dev/ttyUSB1`).
 
-This tutorial uses the default CSMA MAC protocol, for introduction using TSCH see a tutorial on how to [switch the hello-world example to TSCH](/doc/tutorials/Switching-to-TSCH).
+This tutorial uses the default CSMA MAC protocol, for introduction using TSCH see a tutorial on how to [switch the hello-world example to TSCH](/doc/upstream/tutorials)/Switching-to-TSCH).
 
 Log in to one node (e.g. `make TARGET=zoul MOTES=/dev/ttyUSB0 login`) and get its link-local IPv6 address via the shell:
 ```

@@ -1,6 +1,6 @@
 # Antelope
 
-[Antelope](http://dl.acm.org/citation.cfm?id=2070974) is a lightweight, relational database management system for resource-constrained IoT devices. It has been designed to run on top of a file system such as [Coffee](/doc/programming/Coffee).
+[Antelope](http://dl.acm.org/citation.cfm?id=2070974) is a lightweight, relational database management system for resource-constrained IoT devices. It has been designed to run on top of a file system such as [Coffee](/doc/upstream/programming)/Coffee).
 
 ## Programming Antelope
 

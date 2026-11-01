@@ -38,7 +38,7 @@ In order to compile for the nRF5340 and nRF52840 platforms you'll need:
 
 The toolchain used to build Contiki-NG is arm-gcc, also used by other arm-based Contiki-NG ports.
 
-If you use the docker image or the vagrant image, this will be pre-installed for you. Otherwise, depending on your system, please follow the respective installation instructions ([native Linux](/doc/getting-started/Toolchain-installation-on-Linux.md) / [native mac OS](/doc/getting-started/Toolchain-installation-on-macOS.md))
+If you use the docker image or the vagrant image, this will be pre-installed for you. Otherwise, depending on your system, please follow the respective installation instructions ([native Linux](/doc/upstream/getting-started)/Toolchain-installation-on-Linux.md) / [native mac OS](/doc/upstream/getting-started)/Toolchain-installation-on-macOS.md))
 
 * GNU make
 

@@ -5,7 +5,7 @@ It can easily be used to run, debug and test your Contiki-NG applications withou
 
 Renode has been used by various entities including Antmicro and RISE SICS for Contiki-NG development.
 
-Renode is readily available in the Contiki-NG [Docker image](/doc/getting-started/Docker).
+Renode is readily available in the Contiki-NG [Docker image](/doc/upstream/getting-started)/Docker).
 If you prefer a native install of Renode, follow the instructions from the [Renode project README](https://github.com/renode/renode/blob/master/README.rst#installation).
 
 ## Starting Renode

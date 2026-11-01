@@ -16,14 +16,14 @@ This implementation is presented in depth and evaluated in our paper: [*TSCH and
 The scheduler Orchestra is detailed in [*Orchestra: Robust Mesh Networks Through Autonomously Scheduled TSCH*](http://www.simonduquennoy.net/papers/duquennoy15orchestra.pdf), ACM SenSys'15.
 
 More documentation on:
-* [Orchestra](/doc/programming/Orchestra)
-* [The 6top sub-layer](/doc/programming/6TiSCH-6top-sub-layer)
+* [Orchestra](/doc/upstream/programming)/Orchestra)
+* [The 6top sub-layer](/doc/upstream/programming)/6TiSCH-6top-sub-layer)
 
 ## Getting started
 
-* [TSCH tutorial in Contiki-NG](/doc/tutorials/TSCH-and-6TiSCH)
-* [Switching Contiki-NG applications to TSCH](/doc/tutorials/Switching-to-TSCH)
-* [Contiki-NG TSCH example applications](/doc/programming/TSCH-example-applications)
+* [TSCH tutorial in Contiki-NG](/doc/upstream/tutorials)/TSCH-and-6TiSCH)
+* [Switching Contiki-NG applications to TSCH](/doc/upstream/tutorials)/Switching-to-TSCH)
+* [Contiki-NG TSCH example applications](/doc/upstream/programming)/TSCH-example-applications)
 
 ## Features
 
@@ -132,7 +132,7 @@ Likewise, set `TSCH_JOIN_MY_PANID_ONLY` to force joining networks with a specifi
 By default (see `TSCH_SCHEDULE_WITH_6TISCH_MINIMAL`), our implementation runs a 6TiSCH minimal schedule, which emulates an always-on link on top of TSCH.
 The schedule consists in a single shared slot for all transmissions and receptions, in a slotframe of length `TSCH_SCHEDULE_DEFAULT_LENGTH`.
 
-As an alternative, we provide [Orchestra](/doc/programming/Orchestra), an autonomous scheduling solution for TSCH where nodes maintain their own schedule locally, solely based on their local RPL state.
+As an alternative, we provide [Orchestra](/doc/upstream/programming)/Orchestra), an autonomous scheduling solution for TSCH where nodes maintain their own schedule locally, solely based on their local RPL state.
 
 Finally, one can also implement his own scheduler, centralized or distributed, based on the scheduling API provides in `os/net/mac/tsch/tsch-schedule.h`.
 

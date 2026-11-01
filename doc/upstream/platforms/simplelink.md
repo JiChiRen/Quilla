@@ -95,7 +95,7 @@ To use the port you need:
 
 * A toolchain to build firmware:
 
-    * If you use the docker image or the vagrant image, this will be pre-installed for you. Otherwise, depending on your system, please follow the respective installation instructions ([native Linux](/doc/getting-started/Toolchain-installation-on-Linux) / [native mac OS](/doc/getting-started/Toolchain-installation-on-macOS)).
+    * If you use the docker image or the vagrant image, this will be pre-installed for you. Otherwise, depending on your system, please follow the respective installation instructions ([native Linux](/doc/upstream/getting-started)/Toolchain-installation-on-Linux) / [native mac OS](/doc/upstream/getting-started)/Toolchain-installation-on-macOS)).
 
     * TI's [Code Composer Studio][ccs] can be used to build and debug
       Contiki-NG applications for the SimpleLink platform, which is especially
@@ -116,8 +116,8 @@ To use the port you need:
 For additional help on how to set your system up, you may also find the guides
 below useful:
 
-* [Native toolchain installation (Linux)](/doc/getting-started/Toolchain-installation-on-Linux)
-* [Native toolchain installation (macOS)](/doc/getting-started/Toolchain-installation-on-macOS)
+* [Native toolchain installation (Linux)](/doc/upstream/getting-started)/Toolchain-installation-on-Linux)
+* [Native toolchain installation (macOS)](/doc/upstream/getting-started)/Toolchain-installation-on-macOS)
 
 
 ## Examples

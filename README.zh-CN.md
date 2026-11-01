@@ -12,7 +12,7 @@
   <img src="https://img.shields.io/badge/MISRA--C:2012-coding%20guidelines-informational.svg" alt="MISRA C:2012 coding guidelines">
 </p>
 <p align="center">
-  <a href="https://github.com/jichiren/Quilla/actions/workflows/build.yml"><img src="https://github.com/jichiren/Quilla/actions/workflows/build.yml/badge.svg" alt="CI build"></a>
+  <a href="https://github.com/JiChiRen/Quilla/actions/workflows/build.yml"><img src="https://github.com/JiChiRen/Quilla/actions/workflows/build.yml/badge.svg" alt="CI build"></a>
 </p>
 
 **中文** · [English](README.md)

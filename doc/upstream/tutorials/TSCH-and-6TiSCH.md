@@ -1,6 +1,6 @@
 # TSCH and 6TiSCH
 
-This tutorial will guide you through using TSCH and 6TiSCH (see [doc:tsch]). We will start from the `hello-world` example with the shell enabled (see [tutorial:shell]) and with MAC logs set to the maximum level (`LOG_CONF_LEVEL_MAC` set to `LOG_LEVEL_DBG`, see [tutorial:logging]). For existing examples using TSCH, see [Contiki-NG TSCH example applications](/doc/programming/TSCH-example-applications).
+This tutorial will guide you through using TSCH and 6TiSCH (see [doc:tsch]). We will start from the `hello-world` example with the shell enabled (see [tutorial:shell]) and with MAC logs set to the maximum level (`LOG_CONF_LEVEL_MAC` set to `LOG_LEVEL_DBG`, see [tutorial:logging]). For existing examples using TSCH, see [Contiki-NG TSCH example applications](/doc/upstream/programming)/TSCH-example-applications).
 
 To enable TSCH, all you need to do is to set it as the MAC layer in the project Makefile:
 ```

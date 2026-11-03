@@ -279,6 +279,6 @@ python tools/quilla_host_upgrader.py --self-test
 | 帧格式、CRC、命令码 | `os/services/quilla-qboot/quilla-qiap.{h,c}` |
 | 分区布局、unlock key | `os/services/quilla-qboot/quilla-qboot-hal.h` |
 | CRC 算法 | `os/lib/crc16.c` |
-| 启动分支（shell / 升级 / 跳转 APP） | `arch/cpu/arm/<mcu>/qboot-main.c` |
+| 启动分支（shell / 升级 / 跳转 APP） | `os/services/quilla-qboot/qboot-main.c`（共享） |
 | QBOOT 标志状态 | `os/services/quilla-qboot/quilla-qboot-flag.{h,c}` |
 | `swqboot` 命令 | `os/services/quilla-qboot/quilla-app-qboot.c` |

@@ -97,10 +97,10 @@ QBOOT 只纳必要文件，剔除整包 Contiki 网络栈、显示/SPI-DMA、cti
 | `os/sys`（5） | `atomic.c`、`process.c`、`kern-guard.c`、`etimer.c`、`timer.c` |
 | `os/lib`（6） | `assert.c`、`crc16.c`、`list.c`、`memb.c`、`ringbuf.c`、`ringbufindex.c` |
 | `os/services`（1） | `quilla-shell.c` |
-| `mounter`（5） | `shellport.c`、`clock.c`、`int-master.c`、**`quilla-qboot-hal.c`**、**`qboot-main.c`** |
-| `quilla-qboot`（3） | **`quilla-qboot-flag.c`**、**`quilla-qboot-meta.c`**、**`quilla-qiap.c`** |
+| `mounter`（4） | `shellport.c`、`clock.c`、`int-master.c`、**`quilla-qboot-hal.c`** |
+| `quilla-qboot`（4） | **`quilla-qboot-flag.c`**、**`quilla-qboot-meta.c`**、**`quilla-qiap.c`**、**`qboot-main.c`** |
 
-> `qboot-main.c`（QBOOT 入口，含 `main()`）与 `quilla-qboot-hal.c`（硬件实现）属 arch 层；`quilla-qboot-flag.c`（对 meta 的薄封装）、`quilla-qboot-meta.c`（磨损均衡 META 存储）、`quilla-qiap.c` 是硬件无关的 OS 模块，见第 4.1 节。
+> `qboot-main.c`（QBOOT 入口，含 `main()`，现跨端口共享于 `os/services/quilla-qboot/qboot-main.c`）与其余 QBOOT 服务一样是硬件无关的 OS 模块；`quilla-qboot-hal.c`（硬件实现）仍留在 arch 层；`quilla-qboot-flag.c`（对 meta 的薄封装）、`quilla-qboot-meta.c`（磨损均衡 META 存储）、`quilla-qiap.c` 是硬件无关的 OS 模块，见第 4.1 节。
 
 **QBOOT 明确不编入**：`main.c`、`py32f040_hal_msp.c`、`py32f040_it.c`、`hal_lptim.c`、`hal_iwdg.c`、`py32f040xx_Start_Kit.c`、`soc.c`、`platform.c`、`lpm.c`、`rtimer*.c`、`dbg.c`、`watchdog.c`、网络栈、显示/SPI-DMA。
 
@@ -126,7 +126,7 @@ boot 相关模块按"OS 声明接口、平台实现"拆分，与 `int-master.h`/
 | OS（硬件无关） | `os/services/quilla-qboot/quilla-app-qboot.{h,c}` | APP 侧 `swqboot` 命令 |
 | OS（接口声明） | `os/services/quilla-qboot/quilla-qboot-hal.h` | 平台需实现的接口 + 分区布局常量 |
 | 平台实现 | `arch/cpu/arm/<mcu>/quilla-qboot-hal.c` | 各 MCU 的 Flash 擦写/读、系统复位、VTOR 跳转、串口发送 |
-| 平台入口 | `arch/cpu/arm/<mcu>/qboot-main.c` | `main()`、串口 ring、shell 循环、启动策略 |
+| 平台入口 | `os/services/quilla-qboot/qboot-main.c`（共享） | `main()`、串口 ring、shell 循环、启动策略；调用各 MCU `clock_init()` / `shellport_init()` / `quilla_qboot_hal_app_image_valid()` |
 
 OS 侧模块**不 include 任何 HAL/CMSIS 头**，机器操作全部经 `quilla_qboot_hal_*()`：
 
@@ -159,7 +159,7 @@ APP 侧源码接入（`user/<mcu>/Src/`）：
 - `main.c` 在 `shellport_init()` 后调用 `shell_set_partition_tag("app1")` 与 `quilla_app_qboot_init()`（头文件用源相对路径 `../../../os/services/quilla-qboot/quilla-app-qboot.h`，保证三套构建都能解析）；
 - `system_<device>.c` 在 `QAPP_BUILD` 下把 `VECT_TAB_OFFSET` 设为 `0x7000U`。
 
-> QBOOT 专属文件 `qboot-main.c` / `quilla-qiap.c` **不进 APP 构建**。`quilla-qboot-hal.c` 两侧都要编，但其中 `quilla_qboot_hal_transmit()` 由 `QBOOT_BUILD` 守卫，APP 下为空实现。
+> QBOOT 专属文件 `qboot-main.c`（`os/services/quilla-qboot`）/ `quilla-qiap.c` **不进 APP 构建**。`quilla-qboot-hal.c` 两侧都要编，但其中 `quilla_qboot_hal_transmit()` 由 `QBOOT_BUILD` 守卫，APP 下为空实现。
 
 ---
 
@@ -185,7 +185,7 @@ APP 侧源码接入（`user/<mcu>/Src/`）：
 
 | 新增 `.c` | Keil | EIDE `.eide/eide.json` | GNU `Makefile` |
 | --- | --- | --- | --- |
-| `arch/cpu/arm/py32f040xb/qboot-main.c`（QBOOT 专属） | `QBOOT.uvprojx` ✓ | （EIDE 无 QBOOT 配置，用 `make -f Makefile.qboot`） | `Makefile.qboot` ✓ |
+| `os/services/quilla-qboot/qboot-main.c`（QBOOT 专属，共享） | `QBOOT.uvprojx` ✓ | （EIDE 无 QBOOT 配置，用 `make -f Makefile.qboot`） | `Makefile.qboot` ✓ |
 | `arch/cpu/arm/py32f040xb/quilla-qboot-hal.c`（共用） | `QBOOT.uvprojx` ✓ + `QAPP.uvprojx` ✓ | `QAPP`（eide.json） ✓ | `Makefile`(QAPP) ✓ + `Makefile.qboot` ✓ |
 | `os/services/quilla-qboot/quilla-qboot-flag.c`（共用） | `QBOOT.uvprojx` ✓ + `QAPP.uvprojx` ✓ | `QAPP`（eide.json） ✓ | `Makefile`(QAPP) ✓ + `Makefile.qboot` ✓ |
 | `os/services/quilla-qboot/quilla-qboot-meta.c`（共用） | `QBOOT.uvprojx` ✓ + `QAPP.uvprojx` ✓ | `QAPP`（eide.json） ✓ | `Makefile`(QAPP) ✓ + `Makefile.qboot` ✓ |

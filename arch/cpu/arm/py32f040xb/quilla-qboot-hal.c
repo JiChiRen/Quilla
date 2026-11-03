@@ -254,3 +254,22 @@ quilla_qboot_hal_transmit(const uint8_t *data, uint16_t len)
   (void)len;
 #endif
 }
+
+int
+quilla_qboot_hal_app_image_valid(void)
+{
+  uint32_t vec[2];
+
+  quilla_qboot_hal_flash_read(QUILLA_QBOOT_APP_START, (uint8_t *)vec, sizeof(vec));
+
+  if(vec[0] < QUILLA_QBOOT_RAM_START ||
+     vec[0] >= (QUILLA_QBOOT_RAM_START + QUILLA_QBOOT_RAM_SIZE)) {
+    return 0;                            /* initial SP outside RAM */
+  }
+  if(vec[1] < QUILLA_QBOOT_APP_START ||
+     vec[1] > QUILLA_QBOOT_APP_END ||
+     (vec[1] & 1U) == 0U) {
+    return 0;                            /* reset vector outside APP, or not Thumb */
+  }
+  return 1;
+}

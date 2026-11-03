@@ -30,14 +30,14 @@
 
 | 系统 | 职责 | 是否用 OS 调度 | 关键源文件（建议） |
 | --- | --- | --- | --- |
-| **QBOOT** | 判断标志、跳转 APP、串口 QIAP 接收与烧写 | 复用最小 OS（仅为跑 shell 进程） | `arch/cpu/arm/<mcu>/qboot-main.c`、`arch/cpu/arm/<mcu>/quilla-qboot-hal.c`、`os/services/quilla-qboot/{quilla-qiap.c,quilla-qboot-meta.c,quilla-qboot-flag.c}`、`quilla-shell.c`、`shellport.c`、`arch/cpu/arm` 最小 HAL（rcc/gpio/uart/dma/pwr/cortex/flash）、`os/sys/{process,clock,...}`、`os/lib/{crc16,ringbuf,...}` |
+| **QBOOT** | 判断标志、跳转 APP、串口 QIAP 接收与烧写 | 复用最小 OS（仅为跑 shell 进程） | `os/services/quilla-qboot/qboot-main.c`（共享启动入口）、`arch/cpu/arm/<mcu>/quilla-qboot-hal.c`、`os/services/quilla-qboot/{quilla-qiap.c,quilla-qboot-meta.c,quilla-qboot-flag.c}`、`quilla-shell.c`、`shellport.c`、`arch/cpu/arm` 最小 HAL（rcc/gpio/uart/dma/pwr/cortex/flash）、`os/sys/{process,clock,...}`、`os/lib/{crc16,ringbuf,...}` |
 | **APP** | 业务（显示、指令解析、SPI DMA 等完整功能） | 完整 Contiki | 现有 `main.c` 全量 + `arch/cpu/arm/<mcu>/quilla-qboot-hal.c` + `os/services/quilla-qboot/{quilla-qboot-meta.c,quilla-qboot-flag.c,quilla-app-qboot.c}` |
 
 两系统**共用** `arch/`、`os/` 同一份源码，差异只在于：
 
 1. **链接脚本不同**（Flash 区域切分 + APP 的 VTOR 重定位）；
 2. **构建源文件清单不同**（QBOOT 用最小集，见第 4 节）；
-3. **入口与少量初始化不同**（QBOOT 用 `qboot-main.c`，APP 用 `main.c`）；
+3. **入口与少量初始化不同**（QBOOT 用共享的 `os/services/quilla-qboot/qboot-main.c`，APP 用 `main.c`）；
 4. **运行期各自调用 `shell_set_partition_tag()`**（见第 6 节）。
 
 > 注意：QBOOT 也使用 shell（为了 `part` 命令和可选的人机交互），因此必须保留让 shell 进程能跑起来的最小 OS 子集（process/clock 等）。所谓"减少 QBOOT 体积"主要是**剔除网络栈、显示、SPI DMA、CoAP/SNMP 等 APP 专属模块**，而非彻底裸机。若希望 QBOOT 进一步瘦身到裸机轮询（连 shell 进程调度都不要），需要把 shell 改成轮询版，工作量更大；本文档默认采用"最小 OS + shell"方案。
@@ -77,7 +77,7 @@ APP 不能再用默认的 `VTOR = 0x08000000`。必须在 APP 构建里把 `SCB-
 
 ## 4. 构建分离方案
 
-本仓库每个 MCU 有五处构建登记点（`Makefile`、`Makefile.qboot`、`.eide/eide.json`、`APP.uvprojx`、`QBOOT.uvprojx`）。按"铁律"，每新增 `.c` 必须在五处全部登记。**QBOOT 专用文件（qboot-main.c / quilla-qiap.c）只进 QBOOT 构建，不进现有 APP 构建**，避免回归。
+本仓库每个 MCU 有五处构建登记点（`Makefile`、`Makefile.qboot`、`.eide/eide.json`、`APP.uvprojx`、`QBOOT.uvprojx`）。按"铁律"，每新增 `.c` 必须在五处全部登记。**QBOOT 专用文件（`os/services/quilla-qboot/qboot-main.c` / `quilla-qiap.c`）只进 QBOOT 构建，不进现有 APP 构建**，避免回归。
 
 ### 4.1 现有 APP 构建（改动最小、保持可用）
 为让 APP 具备 `swqboot` 能力，向现有 APP 构建**追加**（不删任何现有项）：
@@ -92,10 +92,10 @@ APP 不能再用默认的 `VTOR = 0x08000000`。必须在 APP 构建里把 `SCB-
 新增 `user/<mcu>/EIDE/Makefile.qboot`（`TARGET = QBOOT`）与 QBOOT 链接脚本（FLASH `LENGTH = 24K`）。`make -f Makefile.qboot` 即产出 `QBOOT/QBOOT.{elf,hex,bin}`。QBOOT 的最小源文件集（**已按真实链接闭包逐一符号核对**，非估算）：
 
 - **启动/系统**：`startup_<device>xx.s`（芯片复位向量 + 弱 ISR）、`user/<mcu>/Src/system_<device>.c`（提供 `SystemInit()`，复位后由 startup 调用，配置 `SystemCoreClock`）。
-  - **QBOOT 不走 `platform_init_stage_one()`**：`qboot-main.c` 直接调用 `clock_init()`（仅配置 SysTick/系统节拍）。原因：`platform_init_stage_one → soc_init` 会拉起 `lpm_init()` 与 `rtimer_init() → rtimer_arch_init()`，后者**强制依赖该 MCU 的 LPTIM HAL 与 `Error_Handler()`**（仅 `main.c` 提供），既增体积又引入 APP 专属符号。QBOOT 只需"系统时钟正确（保证串口波特率）+ SysTick + UART"，`clock_init()` 已足够。
+  - **QBOOT 不走 `platform_init_stage_one()`**：`os/services/quilla-qboot/qboot-main.c` 直接调用 `clock_init()`（仅配置 SysTick/系统节拍）。原因：`platform_init_stage_one → soc_init` 会拉起 `lpm_init()` 与 `rtimer_init() → rtimer_arch_init()`，后者**强制依赖该 MCU 的 LPTIM HAL 与 `Error_Handler()`**（仅 `main.c` 提供），既增体积又引入 APP 专属符号。QBOOT 只需"系统时钟正确（保证串口波特率）+ SysTick + UART"，`clock_init()` 已足够。
 - **HAL（最小，全部用仓库内 vendor HAL 副本，不依赖外部 SDK）**：该 MCU 的 `hal.c`、`hal_rcc.c`、`hal_rcc_ex.c`、`hal_gpio.c`、`hal_dma.c`、`hal_pwr.c`、`hal_uart.c`、`hal_cortex.c`、`hal_flash.c`。
   - `shellport.c` 自带 `HAL_UART_MspInit` / `HAL_DMA_MspInit`（USART 引脚与时钟配置），因此**无需**平台侧的 `*_hal_msp.c`。
-- **QBOOT 业务**：`arch/cpu/arm/<mcu>/qboot-main.c`（入口）、`arch/cpu/arm/<mcu>/quilla-qboot-hal.c`（硬件）、`os/services/quilla-qboot/quilla-qiap.c`、`os/services/quilla-qboot/quilla-qboot-meta.c`（磨损均衡 META 存储）、`os/services/quilla-qboot/quilla-qboot-flag.c`（对 meta 的薄封装）。
+- **QBOOT 业务**：`os/services/quilla-qboot/qboot-main.c`（入口）、`arch/cpu/arm/<mcu>/quilla-qboot-hal.c`（硬件）、`os/services/quilla-qboot/quilla-qiap.c`、`os/services/quilla-qboot/quilla-qboot-meta.c`（磨损均衡 META 存储）、`os/services/quilla-qboot/quilla-qboot-flag.c`（对 meta 的薄封装）。
 - **shell**：`os/services/shell/quilla-shell.c`、`arch/cpu/arm/<mcu>/shellport.c`（复用 shell 串口，直接拿到 `part` 命令）。
 - **OS 最小子集（符号闭包必需）**：`os/sys/process.c`、`os/sys/kern-guard.c`、`os/sys/clock.c`、`os/sys/etimer.c`、`os/sys/timer.c`、`os/sys/atomic.c`、`os/lib/crc16.c`、`os/lib/ringbuf.c`、`os/lib/assert.c`。
   - 依赖链（已逐一核对）：`process.c` 调 `kern_guard_register` / `kern_raise`（宏，展开为 `kern_error_hook_default`，定义于 `kern-guard.c`）→ `kern-guard.c` 必需；`clock.c` 在 `clock_update_ticks()` 中**无条件**调 `etimer_pending()` / `etimer_request_poll()` → `etimer.c` 必需；`etimer.c` 用 `timer_*` → `timer.c` 必需；shell 用 `strcmp`/`memset`、shellport 用 `strlen` → 由 `-specs=nano.specs` 的 `libc_nano.a` 提供，而链接脚本的 `/DISCARD/ { libc.a }` 仅丢弃**完整** libc，不影响这些小函数。
@@ -148,12 +148,12 @@ shell 是公用代码，且遵循"核心不反向引用应用"的既定设计。
   }
   ```
   并在 `shell_init()` 注册该命令。
-- **QBOOT**（`qboot-main.c`）启动后调用 `shell_set_partition_tag("qboot");`
+- **QBOOT**（`os/services/quilla-qboot/qboot-main.c`）启动后调用 `shell_set_partition_tag("qboot");`
 - **APP**（`main.c`）启动后调用 `shell_set_partition_tag("app1");`
 
 这样：判定 `qboot`/`app1` 的逻辑完全在各自的 `main`，shell 始终保持中立、零硬编码；将来新增第三分区也只需改对应入口，不碰 shell。
 
-QBOOT 另注册一个 `pinfo` 命令（`qboot-main.c`），回显真实分区布局 `[PART] APP_START=0x… APP_END=0x… APP_SIZE=0x…`，取编译期宏（`QUILLA_QBOOT_APP_END` = `SOC_FLASH_END`，随 MCU 而异）。上位机读取它，使预检时的可烧录上限始终与设备一致，而非某个写死的 MCU 值。`pinfo` 仅 QBOOT 有（APP shell 无），且与 `part` 一样，QIAP raw sink 接管后即被吞掉。
+QBOOT 另注册一个 `pinfo` 命令（`os/services/quilla-qboot/qboot-main.c`），回显真实分区布局 `[PART] APP_START=0x… APP_END=0x… APP_SIZE=0x…`，取编译期宏（`QUILLA_QBOOT_APP_END` = `SOC_FLASH_END`，随 MCU 而异）。上位机读取它，使预检时的可烧录上限始终与设备一致，而非某个写死的 MCU 值。`pinfo` 仅 QBOOT 有（APP shell 无），且与 `part` 一样，QIAP raw sink 接管后即被吞掉。
 
 ---
 
@@ -379,7 +379,7 @@ python tools/quilla_host_upgrader.py COM3 app.bin --key keys/private.hex
 | `os/services/quilla-qboot/quilla-qiap.h/.c` | QBOOT 侧 QIAP 状态机 | QBOOT |
 | `os/services/quilla-qboot/quilla-qboot-hal.h` | 平台需实现的硬件接口 + 布局常量 | 声明 |
 | `arch/cpu/arm/<mcu>/quilla-qboot-hal.c` | 上述接口的各 MCU 实现（Flash/复位/跳转/发送） | 共用 |
-| `arch/cpu/arm/<mcu>/qboot-main.c` | QBOOT 入口（`main()`、串口 ring、启动策略） | QBOOT |
+| `os/services/quilla-qboot/qboot-main.c`（共享） | QBOOT 入口（`main()`、串口 ring、启动策略） | QBOOT |
 
 > **分层约定**：`os/services/quilla-qboot/*` 全部硬件无关，不 include 任何 HAL/CMSIS 头；机器操作经 `quilla_qboot_hal_*()` 下发到 `arch/cpu/arm/<mcu>/quilla-qboot-hal.c`（与 `int-master.h`/`clock.h` 同范式）。分区布局常量在 `quilla-qboot-hal.h` 中以 `#ifndef` 给出默认值，换平台用 `-D` 覆盖。
 | `user/<mcu>/EIDE/py32f040xb_qboot.ld`（GD32 为对应 QBOOT 脚本） | QBOOT 链接脚本 | QBOOT |

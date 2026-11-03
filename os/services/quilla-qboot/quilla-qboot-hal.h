@@ -256,6 +256,19 @@ void quilla_qboot_hal_reboot(void);
 void quilla_qboot_hal_jump_to_app(uint32_t app_start);
 
 /**
+ * \brief          Mechanical sanity test of the APP image at QUILLA_QBOOT_APP_START
+ * \retval 1  the region looks like a runnable image
+ * \retval 0  blank / corrupted / not an image
+ *
+ * Cortex-M ports check the initial stack pointer (inside RAM) and the reset
+ * vector (inside the APP region, Thumb bit set); the RISC-V port checks the
+ * JAL opcode of the entry word. This is a presence test only -- when a key is
+ * provisioned the signature gate (quilla_qboot_secure_verify_app()) has the
+ * final say. Implemented per port because the test is CPU-arch specific.
+ */
+int quilla_qboot_hal_app_image_valid(void);
+
+/**
  * \brief     Enter and leave a critical section around the RX ring
  * \return   Opaque previous interrupt state, for quilla_qboot_hal_int_restore()
  *

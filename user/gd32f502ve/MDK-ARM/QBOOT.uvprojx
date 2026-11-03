@@ -577,7 +577,7 @@
             <File>
               <FileName>qboot-main.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\arch\cpu\arm\gd32f502ve\qboot-main.c</FilePath>
+              <FilePath>..\..\..\os\services\quilla-qboot\qboot-main.c</FilePath>
             </File>
             <File>
               <FileName>quilla-qboot-hal.c</FileName>
@@ -1174,7 +1174,7 @@
             <File>
               <FileName>qboot-main.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\arch\cpu\arm\gd32f502ve\qboot-main.c</FilePath>
+              <FilePath>..\..\..\os\services\quilla-qboot\qboot-main.c</FilePath>
             </File>
             <File>
               <FileName>quilla-qboot-hal.c</FileName>
@@ -1771,7 +1771,7 @@
             <File>
               <FileName>qboot-main.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\..\..\arch\cpu\arm\gd32f502ve\qboot-main.c</FilePath>
+              <FilePath>..\..\..\os\services\quilla-qboot\qboot-main.c</FilePath>
             </File>
             <File>
               <FileName>quilla-qboot-hal.c</FileName>

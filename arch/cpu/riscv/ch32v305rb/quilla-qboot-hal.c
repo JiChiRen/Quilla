@@ -297,3 +297,19 @@ quilla_qboot_hal_transmit(const uint8_t *data, uint16_t len)
   (void)len;
 #endif
 }
+/*---------------------------------------------------------------------------*/
+int
+quilla_qboot_hal_app_image_valid(void)
+{
+  uint32_t w0;
+
+  quilla_qboot_hal_flash_read(QUILLA_QBOOT_APP_START, (uint8_t *)&w0, sizeof(w0));
+  /* RISC-V has no Cortex-M vector table (no initial-SP-in-vector, no Thumb
+   * bit). The APP entry word at APP_START is _start, a "j handle_reset" (JAL,
+   * opcode 0x6F). An erased/half-written region reads 0xFFFFFFFF (opcode 0x7F)
+   * and fails. Mechanical presence test only. */
+  if((w0 & 0x7FUL) != 0x6FUL) {
+    return 0;
+  }
+  return 1;
+}

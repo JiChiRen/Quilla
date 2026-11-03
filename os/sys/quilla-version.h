@@ -47,7 +47,7 @@
  * because a leading zero makes it an octal literal in C. */
 #define QUILLA_VERSION_MAJOR   0
 #define QUILLA_VERSION_MINOR   11
-#define QUILLA_VERSION_BUILD   0001
+#define QUILLA_VERSION_BUILD   0002
 
 /* Packed 16-bit form: (major << 8) | minor. V0.11 -> 0x000B. This stays the
  * released version on purpose: it is what anti-rollback compares, so debug

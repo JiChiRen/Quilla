@@ -51,7 +51,7 @@ C_SOURCES =  \
 ../../../arch/cpu/arm/CMSIS/Device/Puya/PY32F040/Source/system_py32f040.c \
 ../../../arch/cpu/arm/py32f040xb/clock.c \
 ../../../arch/cpu/arm/py32f040xb/shellport.c \
-../../../arch/cpu/arm/py32f040xb/qboot-main.c \
+../../../os/services/quilla-qboot/qboot-main.c \
 ../../../arch/cpu/arm/py32f040xb/quilla-qboot-hal.c \
 ../../../os/services/quilla-qboot/quilla-qiap.c \
 ../../../os/services/quilla-qboot/quilla-qboot-flag.c \

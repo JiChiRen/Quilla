@@ -29,25 +29,32 @@
  * This file is part of the Quilla operating system.
  *
  * ----------------------------------------------------------------------------
- * QBOOT (bootloader) entry point. Compiled into the QBOOT image only.
+ * QBOOT (bootloader) entry point. Compiled into the QBOOT image only, and
+ * shared by every MCU port: this single translation unit owns the boot
+ * policy, while the CPU-arch specifics it depends on (clock_init(),
+ * shellport_init(), quilla_qboot_hal_app_image_valid()) live in each port's
+ * arch/cpu/<mcu>/ tree and are pulled in here. This is the inverse of the old
+ * layout, where a copy of this logic lived in every
+ * arch/cpu/<mcu>/qboot-main.c.
  *
  * Boot policy:
  *   - flag == QIAP  -> enter the serial upgrade immediately;
- *   - otherwise    -> jump to the APP when its vector table looks sane; only
- *                      when there is no runnable APP (blank / corrupted image)
- *                      does the QBOOT keep the interactive shell alive, so the
- *                      "qiap" command is still reachable over the serial link.
- *                      A lost stack canary refuses the handover too: RAM is no
- *                      longer trustworthy, so no verdict taken from it counts.
+ *   - otherwise    -> jump to the APP when its image looks sane; only when
+ *                      there is no runnable APP (blank / corrupted image) does
+ *                      the QBOOT keep the interactive shell alive, so the "qiap"
+ *                      command is still reachable over the serial link. A lost
+ *                      stack canary refuses the handover too: RAM is no longer
+ *                      trustworthy, so no verdict taken from it counts.
  *
- * The serial link (USART0 on PB6/PB7, DMA assisted RX) is shared with the
- * shell: while the QIAP state machine is active, received bytes are routed to
- * it instead of the shell line buffer so that Flash erase/program never runs
- * inside an interrupt.
+ * The serial link is shared with the shell: while the QIAP state machine is
+ * active, received bytes are routed to it via a small ring buffer (harvested
+ * from the CIRCULAR RX DMA by shellport_rx_harvest() -- called from the shell
+ * process during interactive use, or from this loop while the upgrade owns the
+ * CPU -- and drained here in the main loop) so that Flash erase/program never
+ * runs inside an interrupt.
  *
- * This file owns the platform wiring (main(), the UART ring, the shell loop).
- * The upgrade protocol itself lives in os/services/quilla-qboot/quilla-qiap.c
- * and every machine operation goes through quilla-qboot-hal.h.
+ * The upgrade protocol itself lives in quilla-qiap.c and every machine
+ * operation goes through quilla-qboot-hal.h.
  * ----------------------------------------------------------------------------
  */
 
@@ -58,11 +65,11 @@
 
 #include "sys/clock.h"
 
-#include "../../../../os/services/shell/quilla-shell.h"
-#include "../../../../os/services/quilla-qboot/quilla-qboot-hal.h"
-#include "../../../../os/services/quilla-qboot/quilla-qboot-flag.h"
-#include "../../../../os/services/quilla-qboot/quilla-qiap.h"
-#include "../../../../os/services/quilla-qboot/quilla-qboot-secure.h"
+#include "quilla-shell.h"
+#include "quilla-qboot-hal.h"
+#include "quilla-qboot-flag.h"
+#include "quilla-qiap.h"
+#include "quilla-qboot-secure.h"
 #include "contiki.h"
 #include "sys/kern-stack.h"
 #include "sys/kern-flow.h"
@@ -171,11 +178,13 @@ qboot_qiap_run(void)
      *
      * CRITICAL: harvest pushes every byte the DMA has written since the last
      * call in one shot, but the parser consumes only ONE byte per loop pass.
-     * The loop runs far faster than bytes arrive, so a pass that pops just one
-     * byte lets qboot_rx_ring grow without bound between harvests; a DATA frame
-     * would overflow the ring (qboot_rx_sink drops on full), a frame is silently
-     * lost, and the QIAP parser desyncs. Draining the whole ring each pass keeps
-     * it bounded and lossless. */
+     * The loop runs far faster than bytes arrive (~10 bytes land per pass), so a
+     * pass that pops just one byte lets qboot_rx_ring grow by ~9 every pass;
+     * over the ~62 passes it takes to chew through one 62-byte DATA frame the
+     * ring overflows (qboot_rx_sink drops on full), a whole frame is silently
+     * lost, and the QIAP parser desyncs permanently -- thereafter every ACK
+     * echoes the PREVIOUS chunk's start (offset == one CHUNK). Draining the
+     * whole ring each pass keeps it bounded and lossless. */
     shellport_rx_harvest();
 
     if(quilla_qiap_is_done()) {
@@ -278,34 +287,9 @@ static const shell_cmd_t qboot_pinfo_cmd = {
 };
 
 /* ----------------------------------------------------------------------------
- * APP sanity check before the handover. An erased or half-written APP region
- * must never be jumped into. A valid Cortex-M vector table holds the initial
- * stack pointer inside RAM and the reset vector inside the APP region with
- * the Thumb bit set; erased Flash (0xFFFFFFFF) fails both checks.
- * -------------------------------------------------------------------------- */
-static int
-qboot_app_image_valid(void)
-{
-  uint32_t vec[2];
-
-  quilla_qboot_hal_flash_read(QUILLA_QBOOT_APP_START, (uint8_t *)vec, sizeof(vec));
-
-  if(vec[0] < QUILLA_QBOOT_RAM_START ||
-     vec[0] >= (QUILLA_QBOOT_RAM_START + QUILLA_QBOOT_RAM_SIZE)) {
-    return 0;                            /* initial SP outside RAM */
-  }
-  if(vec[1] < QUILLA_QBOOT_APP_START ||
-     vec[1] > QUILLA_QBOOT_APP_END ||
-     (vec[1] & 1U) == 0U) {
-    return 0;                            /* reset vector outside APP, or not Thumb */
-  }
-  return 1;
-}
-
-/* ----------------------------------------------------------------------------
  * Secure boot gate.
  *
- * A mechanically sane vector table is not enough once a verification key is
+ * A mechanically sane image test is not enough once a verification key is
  * provisioned: the image must also carry a manifest whose signature verifies
  * and whose version is not below the anti-rollback floor. Returns 1 when the
  * APP may be jumped.
@@ -366,13 +350,13 @@ qboot_shell_run(void)
    * never advances in this image and a time budget would either be inert or
    * wrong. Sequence order still applies and is the part that matters here. */
   qboot_shell_flow = kern_flow_register("qboot-shell", KERN_FLOW_MASK(1),
-                                         (clock_time_t)0U);
+                                        (clock_time_t)0U);
   /* Boot stamp. Short visible version line "[BOOT] Quilla V<ver> [VARIANT]".
-   * The host upgrader keys off the "[BOOT]" tag and the "part" command echo
-   * (which contains "qboot") to decide whether to send "qiap" first, so the
-   * banner stays minimal with no extra "QBOOT shell" line.
-   * QUILLA_QBOOT_VARIANT_STR is set per build (SEALED / SEC / CHECK); default
-   * "OPEN" must never ship. */
+   * The host upgrader (tools/quilla_host_upgrader.py) keys off the "[BOOT]" tag
+   * and the "part" command echo (which contains "qboot") to decide whether to
+   * send "qiap" first, so the banner stays minimal with no extra "QBOOT shell"
+   * line. QUILLA_QBOOT_VARIANT_STR is set per build (SEALED / SEC / CHECK);
+   * default "OPEN" must never ship. */
 #ifndef QUILLA_QBOOT_VARIANT_STR
 #define QUILLA_QBOOT_VARIANT_STR "OPEN"
 #endif
@@ -396,7 +380,7 @@ main(void)
   clock_init();                /* minimal init: SysTick only (no LPTIM/lpm) */
   (void)kern_stack_init();     /* paint before anything allocates on it     */
   quilla_qboot_flag_init();
-  shellport_init();            /* USART1 up; shell writer set; shell started  */
+  shellport_init();            /* USART up; shell writer set; shell started */
 
   shell_set_partition_tag("qboot");
 
@@ -406,21 +390,23 @@ main(void)
   }
   if(flag == QUILLA_QBOOT_FLAG_QBOOT) {
     qboot_shell_run();        /* 'swqboot' asked to stay in QBOOT; do NOT
-                                * jump the APP even if its vector table is sane. */
+                                * jump the APP even if its image is sane. */
   }
 
   /* APP1, or a blank/corrupted flag page (reads back as APP1): hand control to
-   * the APP whenever a sane vector table is present. Only an empty or damaged
-   * APP region falls through to the QBOOT shell, keeping 'qiap' reachable.
+   * the APP whenever a sane image is present. Only an empty or damaged APP
+   * region falls through to the QBOOT shell, keeping 'qiap' reachable.
    *
-   * The vector-table check is a mechanical sanity test only; when a key is
-   * provisioned the signature gate has the final say.
+   * The image test (quilla_qboot_hal_app_image_valid()) is a mechanical sanity
+   * test only; when a key is provisioned the signature gate has the final say.
    *
    * The stack verdict comes first and is not advisory: once the canary is gone
-   * the RAM content cannot be trusted, so neither the vector-table test nor the
+   * the RAM content cannot be trusted, so neither the image test nor the
    * signature verdict would mean anything. Checked here rather than left to
    * the shell loop because the jump happens before any loop runs. */
-  if(qboot_stack_ok() && qboot_app_image_valid() && qboot_secure_boot_ok()) {
+  if(qboot_stack_ok() &&
+     quilla_qboot_hal_app_image_valid() &&
+     qboot_secure_boot_ok()) {
     /* Deepest path in the image: SHA-256 over the APP plus the signature
      * check. The short-circuit above means it only runs when a mechanically
      * valid APP is present, so a blank board can never measure it. Emit the

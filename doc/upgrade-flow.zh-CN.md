@@ -15,7 +15,7 @@
 | --- | --- |
 | 上位机工具 | `tools/quilla_host_upgrader.py` |
 | 上位机签名 | `tools/quilla_ed25519_sign.py` |
-| QBOOT 入口（main / 串口环 / shell） | `arch/cpu/arm/<mcu>/qboot-main.c` |
+| QBOOT 入口（main / 串口环 / shell） | `os/services/quilla-qboot/qboot-main.c`（共享） |
 | QIAP 帧状态机 + 写 Flash | `os/services/quilla-qboot/quilla-qiap.c` |
 | 安全启动策略（验签 / 防回滚 / manifest） | `os/services/quilla-qboot/quilla-qboot-secure.c` |
 | Ed25519 验签 | `os/services/quilla-qboot/quilla-ed25519.c` |
@@ -136,7 +136,7 @@
 
 ## 6. 阶段 1：切进 QIAP 接收循环
 
-`qboot-main.c: qboot_qiap_cmd_handler()` → `qboot_qiap_run()`：
+`os/services/quilla-qboot/qboot-main.c: qboot_qiap_cmd_handler()` → `qboot_qiap_run()`：
 
 ```c
 shellport_set_raw_sink(qboot_rx_sink);   /* DMA ISR 收到的字节改投 ring */

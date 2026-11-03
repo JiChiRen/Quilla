@@ -33,7 +33,7 @@ C_SOURCES =  \
 ../../../arch/cpu/riscv/ch32v305rb/Core/core_riscv.c \
 ../../../arch/cpu/riscv/ch32v305rb/clock.c \
 ../../../arch/cpu/riscv/ch32v305rb/shellport.c \
-../../../arch/cpu/riscv/ch32v305rb/qboot-main.c \
+../../../os/services/quilla-qboot/qboot-main.c \
 ../../../arch/cpu/riscv/ch32v305rb/quilla-qboot-hal.c \
 ../../../os/services/quilla-qboot/quilla-qiap.c \
 ../../../os/services/quilla-qboot/quilla-qboot-flag.c \

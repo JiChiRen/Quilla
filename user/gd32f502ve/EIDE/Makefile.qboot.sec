@@ -53,7 +53,7 @@ C_SOURCES =  \
 ../../../arch/cpu/arm/CMSIS/Device/GigaDevice/GD32F50x/Source/system_gd32f50x.c \
 ../../../arch/cpu/arm/gd32f502ve/clock.c \
 ../../../arch/cpu/arm/gd32f502ve/shellport.c \
-../../../arch/cpu/arm/gd32f502ve/qboot-main.c \
+../../../os/services/quilla-qboot/qboot-main.c \
 ../../../arch/cpu/arm/gd32f502ve/quilla-qboot-hal.c \
 ../../../os/services/quilla-qboot/quilla-qiap.c \
 ../../../os/services/quilla-qboot/quilla-qboot-flag.c \

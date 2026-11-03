@@ -23,7 +23,7 @@ Three-layer boundary:
 |---|---|---|
 | `os/` | Kernel, shell services, QIAP protocol, and secure boot | No (`os/` has zero repo-wide references to `arch/` or vendor headers, verified) |
 | `arch/cpu/arm/` common layer | `cpu.h`, `arm-def.h`, `int-master.c`, `dbg.c` | No |
-| `arch/cpu/arm/<mcu>/` | clock / rtimer-arch / soc / shellport / lpm / dev / qboot-hal / qboot-main | **Yes** |
+| `arch/cpu/arm/<mcu>/` | clock / rtimer-arch / soc / shellport / lpm / dev / qboot-hal | **Yes** |
 | `arch/platform/arm/<mcu>/` | `contiki-conf.h`, `platform.c` | **Yes** |
 | `user/<mcu>/` | That MCU's project tree (EIDE / MDK-ARM / Src / Inc) | **Yes** |
 | `arch/cpu/arm/CMSIS/`, `arch/cpu/arm/vendor/` | Device packs and vendor firmware libraries (shared by all MCUs) | Shared |
@@ -47,7 +47,6 @@ arch/cpu/arm/
     ├── soc.{c,h}
     ├── shellport.{c,h}
     ├── lpm.{c,h}
-    ├── qboot-main.c
     ├── quilla-qboot-hal.c
     └── dev/{watchdog,qwdt,qclk}.{c,h}
 

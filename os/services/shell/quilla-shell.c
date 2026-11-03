@@ -38,7 +38,7 @@
 #include "quilla-shell.h"
 
 #include <string.h>
-#include <stdio.h>
+#include <stdarg.h>
 
 /* ------------------------------------------------------------------ */
 /* Configuration (static, no heap -- matches the kernel safety policy)    */
@@ -135,13 +135,235 @@ shell_puts(const char *s)
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* Minimal bounded formatter used by shell_output().                    */
+/*                                                                      */
+/* Replaces newlib vsnprintf (which dragged the whole printf + malloc   */
+/* family into every image that links the shell). Supported conversions:*/
+/*   %s  %c  %d/%i  %u  %x/%X  %%                                       */
+/* with '0' and '-' flags, a decimal field width (1-2 digits), and the  */
+/* 'l' length modifier (accepted; values are 32-bit). Conversions       */
+/* actually used in this code base: %s, %-10s, %08X. Truncation         */
+/* semantics match vsnprintf: output is always NUL-terminated within    */
+/* the buffer capacity.                                                 */
+static void
+shell_fmt_putc(char *buf, unsigned int cap, unsigned int *pos, char c)
+{
+  if(((*pos) + 1U) < cap) {
+    buf[*pos] = c;
+    (*pos) = (*pos) + 1U;
+  }
+}
+
+/* Render an unsigned value into tmp (reversed digit order, no NUL);
+ * returns the digit count. base is 10 or 16. */
+static unsigned int
+shell_fmt_utoa(char tmp[12], uint32_t v, unsigned int base, int upper)
+{
+  unsigned int n = 0U;
+  do {
+    unsigned int d = (unsigned int)(v % base);
+    char c;
+    if(d < 10U) {
+      c = (char)('0' + (int)d);
+    } else {
+      c = (char)((upper ? 'A' : 'a') + (int)(d - 10U));
+    }
+    tmp[n] = c;
+    n++;
+    v /= base;
+  } while((v != 0U) && (n < 12U));
+  return n;
+}
+
+static void
+shell_vfmt(char *buf, unsigned int cap, const char *fmt, va_list ap)
+{
+  unsigned int pos = 0U;
+  const char *p = fmt;
+
+  if((buf == NULL) || (cap == 0U)) {
+    return;
+  }
+  if(fmt == NULL) {
+    buf[0] = '\0';
+    return;
+  }
+
+  while(*p != '\0') {
+    unsigned int width = 0U;
+    int left = 0;
+    int zero = 0;
+    char spec;
+    char digits[12];
+    unsigned int ndig;
+    const char *s;
+    unsigned int slen;
+    unsigned int i;
+
+    if(*p != '%') {
+      shell_fmt_putc(buf, cap, &pos, *p);
+      p++;
+      continue;
+    }
+    p++;
+    if(*p == '%') {
+      shell_fmt_putc(buf, cap, &pos, '%');
+      p++;
+      continue;
+    }
+
+    /* Flags: '-' (left justify), '0' (zero pad). */
+    for(;;) {
+      if(*p == '-') {
+        left = 1;
+        p++;
+      } else if(*p == '0') {
+        zero = 1;
+        p++;
+      } else {
+        break;
+      }
+    }
+    /* Field width, clamped to 16. */
+    while((*p >= '0') && (*p <= '9')) {
+      width = (width * 10U) + (unsigned int)(*p - '0');
+      if(width > 16U) {
+        width = 16U;
+      }
+      p++;
+    }
+    /* Length modifier 'l': accepted, ignored (32-bit targets). */
+    while(*p == 'l') {
+      p++;
+    }
+    spec = *p;
+    if(spec == '\0') {
+      break;
+    }
+    p++;
+
+    s = NULL;
+    slen = 0U;
+    ndig = 0U;
+
+    if(spec == 's') {
+      s = va_arg(ap, const char *);
+      if(s == NULL) {
+        s = "(null)";
+      }
+      slen = strlen(s);
+      if(slen > width) {
+        width = slen;
+      }
+      if(left != 0) {
+        for(i = 0U; i < slen; i++) {
+          shell_fmt_putc(buf, cap, &pos, s[i]);
+        }
+        for(i = slen; i < width; i++) {
+          shell_fmt_putc(buf, cap, &pos, ' ');
+        }
+      } else {
+        for(i = slen; i < width; i++) {
+          shell_fmt_putc(buf, cap, &pos, ' ');
+        }
+        for(i = 0U; i < slen; i++) {
+          shell_fmt_putc(buf, cap, &pos, s[i]);
+        }
+      }
+    } else if(spec == 'c') {
+      char cval = (char)va_arg(ap, int);
+      if(width == 0U) {
+        width = 1U;
+      }
+      if(left != 0) {
+        shell_fmt_putc(buf, cap, &pos, cval);
+        for(i = 1U; i < width; i++) {
+          shell_fmt_putc(buf, cap, &pos, ' ');
+        }
+      } else {
+        for(i = 1U; i < width; i++) {
+          shell_fmt_putc(buf, cap, &pos, ' ');
+        }
+        shell_fmt_putc(buf, cap, &pos, cval);
+      }
+    } else if((spec == 'd') || (spec == 'i') || (spec == 'u') ||
+              (spec == 'x') || (spec == 'X')) {
+      uint32_t v;
+      int neg = 0;
+      unsigned int pad_zero;
+      unsigned int len;
+
+      if((spec == 'd') || (spec == 'i')) {
+        int32_t sv = va_arg(ap, int32_t);
+        if(sv < 0) {
+          neg = 1;
+          /* Two's-complement negate without overflow on INT32_MIN. */
+          v = ~((uint32_t)sv) + 1U;
+        } else {
+          v = (uint32_t)sv;
+        }
+      } else {
+        v = va_arg(ap, uint32_t);
+      }
+
+      ndig = shell_fmt_utoa(digits, v,
+                            ((spec == 'x') || (spec == 'X')) ? 16U : 10U,
+                            (spec == 'X'));
+
+      len = ndig + (unsigned int)neg;
+      if(len > width) {
+        width = len;
+      }
+      pad_zero = ((zero != 0) && (left == 0)) ? 1U : 0U;
+
+      if(pad_zero != 0U) {
+        if(neg != 0) {
+          shell_fmt_putc(buf, cap, &pos, '-');
+        }
+        for(i = len; i < width; i++) {
+          shell_fmt_putc(buf, cap, &pos, '0');
+        }
+        for(i = 0U; i < ndig; i++) {
+          shell_fmt_putc(buf, cap, &pos, digits[ndig - 1U - i]);
+        }
+      } else if(left != 0) {
+        if(neg != 0) {
+          shell_fmt_putc(buf, cap, &pos, '-');
+        }
+        for(i = 0U; i < ndig; i++) {
+          shell_fmt_putc(buf, cap, &pos, digits[ndig - 1U - i]);
+        }
+        for(i = len; i < width; i++) {
+          shell_fmt_putc(buf, cap, &pos, ' ');
+        }
+      } else {
+        for(i = len; i < width; i++) {
+          shell_fmt_putc(buf, cap, &pos, ' ');
+        }
+        if(neg != 0) {
+          shell_fmt_putc(buf, cap, &pos, '-');
+        }
+        for(i = 0U; i < ndig; i++) {
+          shell_fmt_putc(buf, cap, &pos, digits[ndig - 1U - i]);
+        }
+      }
+    } else {
+      /* Unknown conversion: emit it verbatim, never swallow input. */
+      shell_fmt_putc(buf, cap, &pos, '%');
+      shell_fmt_putc(buf, cap, &pos, spec);
+    }
+  }
+  buf[pos] = '\0';
+}
+
 void
 shell_output(const char *fmt, ...)
 {
   char buf[128];
   va_list ap;
   va_start(ap, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, ap);
+  shell_vfmt(buf, (unsigned int)sizeof(buf), fmt, ap);
   va_end(ap);
   shell_puts(buf);
 }

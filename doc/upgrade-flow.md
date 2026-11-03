@@ -15,7 +15,7 @@ This document describes a complete serial-port upgrade: entering QBOOT, per-fram
 | --- | --- |
 | Host tool | `tools/quilla_host_upgrader.py` |
 | Host signing | `tools/quilla_ed25519_sign.py` |
-| QBOOT entry (main / serial loop / shell) | `arch/cpu/arm/<mcu>/qboot-main.c` |
+| QBOOT entry (main / serial loop / shell) | `os/services/quilla-qboot/qboot-main.c` (shared) |
 | QIAP frame state machine + Flash writing | `os/services/quilla-qboot/quilla-qiap.c` |
 | Secure boot policy (signature verification / anti-rollback / manifest) | `os/services/quilla-qboot/quilla-qboot-secure.c` |
 | Ed25519 verification | `os/services/quilla-qboot/quilla-ed25519.c` |
@@ -135,7 +135,7 @@ An upgrade must take place inside QBOOT. There are three ways to enter it:
 
 ## 6. Stage 1: Entering the QIAP Receive Loop
 
-`qboot-main.c: qboot_qiap_cmd_handler()` → `qboot_qiap_run()`:
+`os/services/quilla-qboot/qboot-main.c: qboot_qiap_cmd_handler()` → `qboot_qiap_run()`:
 
 ```c
 shellport_set_raw_sink(qboot_rx_sink);   /* bytes from the DMA ISR now go to the ring */

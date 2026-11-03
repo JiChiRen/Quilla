@@ -96,17 +96,17 @@ QBOOT includes only the necessary files, excluding the full Contiki network stac
 | `os/sys` (5) | `atomic.c`, `process.c`, `kern-guard.c`, `etimer.c`, `timer.c` |
 | `os/lib` (6) | `assert.c`, `crc16.c`, `list.c`, `memb.c`, `ringbuf.c`, `ringbufindex.c` |
 | `os/services` (1) | `quilla-shell.c` |
-| `mounter` (5) | `shellport.c`, `clock.c`, `int-master.c`, **`quilla-qboot-hal.c`**, **`qboot-main.c`** |
-| `quilla-qboot` (3) | **`quilla-qboot-flag.c`**, **`quilla-qboot-meta.c`**, **`quilla-qiap.c`** |
+| `mounter` (4) | `shellport.c`, `clock.c`, `int-master.c`, **`quilla-qboot-hal.c`** |
+| `quilla-qboot` (4) | **`quilla-qboot-flag.c`**, **`quilla-qboot-meta.c`**, **`quilla-qiap.c`**, **`qboot-main.c`** |
 
-> `qboot-main.c` (QBOOT entry, contains `main()`) and `quilla-qboot-hal.c` (hardware implementation) belong to the arch layer; `quilla-qboot-flag.c` (thin delegation to meta), `quilla-qboot-meta.c` (wear-levelled META store), and `quilla-qiap.c` are hardware-independent OS modules, see §4.1.
+> `qboot-main.c` (QBOOT entry, contains `main()`, now shared across all ports at `os/services/quilla-qboot/qboot-main.c`) is a hardware-independent OS module like the other QBOOT services; `quilla-qboot-hal.c` (hardware implementation) remains in the arch layer; `quilla-qboot-flag.c` (thin delegation to meta), `quilla-qboot-meta.c` (wear-levelled META store), and `quilla-qiap.c` are hardware-independent OS modules, see §4.1.
 
 **Explicitly NOT compiled into QBOOT**: `main.c`, `py32f040_hal_msp.c`, `py32f040_it.c`, `hal_lptim.c`, `hal_iwdg.c`, `py32f040xx_Start_Kit.c`, `soc.c`, `platform.c`, `lpm.c`, `rtimer*.c`, `dbg.c`, `watchdog.c`, network stack, display/SPI-DMA.
 
 Rationale and closure basis (checked symbol by symbol):
 - `shellport.c` provides its own `USART2_IRQHandler` / `DMA1_Channel4_5_6_7_IRQHandler`, so `py32f040_it.c` is **not needed**; it also provides its own `HAL_UART_MspInit`/`HAL_DMA_MspInit`, so `py32f040_hal_msp.c` is **not needed**.
 - The `SysTick_Handler` in `py32f040_it.c` is disabled by `#if 0`; `clock.c` is the sole provider.
-- `qiap_main.c` calls `clock_init()` directly rather than `platform_init_stage_one()`, thus not pulling in `soc_init → rtimer_init → rtimer_arch_init → HAL_LPTIM` nor `Error_Handler()` (the latter is provided only by `main.c`, which QBOOT does not include).
+- `qboot-main.c` (now `os/services/quilla-qboot/qboot-main.c`) calls `clock_init()` directly rather than `platform_init_stage_one()`, thus not pulling in `soc_init → rtimer_init → rtimer_arch_init → HAL_LPTIM` nor `Error_Handler()` (the latter is provided only by `main.c`, which QBOOT does not include).
 - `QBOOT_BUILD` is used to isolate `clock_update_ticks()` in `clock.c`'s `SysTick_Handler` (that path would pull in `RTIMER_NOW()` → rtimer/lpm). QBOOT keeps only `HAL_IncTick()`.
 - `clock.c` unconditionally calls `etimer_pending()`/`etimer_request_poll()` → `etimer.c` + `timer.c` are mandatory; `process.c` calls `kern_guard_*` → `kern-guard.c` is mandatory.
 - `lpm_exit()` is an empty macro when `LPM_CONF_ENABLE=0` (`contiki-conf.h`), so `lpm.c` is not needed.
@@ -125,7 +125,7 @@ The boot-related modules are split as "OS declares the interface, platform imple
 | OS (hardware-independent) | `os/services/quilla-qboot/quilla-app-qboot.{h,c}` | APP-side `swqboot` command |
 | OS (interface declaration) | `os/services/quilla-qboot/quilla-qboot-hal.h` | Interfaces the platform must implement + partition layout constants |
 | Platform implementation | `arch/cpu/arm/<mcu>/quilla-qboot-hal.c` | Per-MCU Flash erase/write/read, system reset, VTOR jump, serial transmit |
-| Platform entry | `arch/cpu/arm/<mcu>/qboot-main.c` | `main()`, serial ring, shell loop, boot policy |
+| Platform entry | `os/services/quilla-qboot/qboot-main.c` (shared) | `main()`, serial ring, shell loop, boot policy; calls per-MCU `clock_init()` / `shellport_init()` / `quilla_qboot_hal_app_image_valid()` |
 
 The OS-side modules **do not include any HAL/CMSIS headers**; all machine operations go through `quilla_qboot_hal_*()`:
 
@@ -158,7 +158,7 @@ APP-side source integration (`user/<mcu>/Src/`):
 - `main.c` calls `shell_set_partition_tag("app1")` and `quilla_app_qboot_init()` after `shellport_init()` (the header uses the source-relative path `../../../os/services/quilla-qboot/quilla-app-qboot.h` to ensure all three build systems can resolve it);
 - `system_<device>.c` sets `VECT_TAB_OFFSET` to `0x7000U` under `QAPP_BUILD`.
 
-> QBOOT-exclusive files `qboot-main.c` / `quilla-qiap.c` are **not included in the APP build**. `quilla-qboot-hal.c` is compiled on both sides, but its `quilla_qboot_hal_transmit()` is guarded by `QBOOT_BUILD` and is an empty implementation under APP.
+> QBOOT-exclusive files `qboot-main.c` (`os/services/quilla-qboot`) / `quilla-qiap.c` are **not included in the APP build**. `quilla-qboot-hal.c` is compiled on both sides, but its `quilla_qboot_hal_transmit()` is guarded by `QBOOT_BUILD` and is an empty implementation under APP.
 
 ---
 
@@ -184,7 +184,7 @@ APP-side source integration (`user/<mcu>/Src/`):
 
 | New `.c` | Keil | EIDE `.eide/eide.json` | GNU `Makefile` |
 | --- | --- | --- | --- |
-| `arch/cpu/arm/py32f040xb/qboot-main.c` (QBOOT-only) | `QBOOT.uvprojx` ✓ | (EIDE has no QBOOT config; use `make -f Makefile.qboot`) | `Makefile.qboot` ✓ |
+| `os/services/quilla-qboot/qboot-main.c` (QBOOT-only, shared) | `QBOOT.uvprojx` ✓ | (EIDE: `make -f Makefile.qboot`) | `Makefile.qboot` ✓ |
 | `arch/cpu/arm/py32f040xb/quilla-qboot-hal.c` (shared) | `QBOOT.uvprojx` ✓ + `QAPP.uvprojx` ✓ | `QAPP` (eide.json) ✓ | `Makefile`(QAPP) ✓ + `Makefile.qboot` ✓ |
 | `os/services/quilla-qboot/quilla-qboot-flag.c` (shared) | `QBOOT.uvprojx` ✓ + `QAPP.uvprojx` ✓ | `QAPP` (eide.json) ✓ | `Makefile`(QAPP) ✓ + `Makefile.qboot` ✓ |
 | `os/services/quilla-qboot/quilla-qboot-meta.c` (shared) | `QBOOT.uvprojx` ✓ + `QAPP.uvprojx` ✓ | `QAPP` (eide.json) ✓ | `Makefile`(QAPP) ✓ + `Makefile.qboot` ✓ |

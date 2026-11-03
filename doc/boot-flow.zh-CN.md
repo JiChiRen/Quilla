@@ -48,7 +48,7 @@
 
 ## 2. 阶段 1：最小化初始化
 
-`arch/cpu/arm/<mcu>/qboot-main.c: main()`：
+`os/services/quilla-qboot/qboot-main.c: main()`（共享入口，跨端口）：
 
 ```c
 clock_init();            /* QBOOT_BUILD 下只有 SysTick，不引入 LPTIM/lpm */
@@ -276,15 +276,23 @@ QBOOT 24 KB 预算实测占用：
 
 > **注意**：本节所有数据均为**开发过程实测值**（联调期取得），会随软件版本与工具链（版本 / 优化等级 / LTO）变化而不同，**不构成交付规格**；在据此下容量结论前，请在自己的构建上复测。
 
-| 工具链 / 配置 | ROM | 余量 |
+| 工具链 / 配置 | ROM（text） | 对 24 KB 余量 |
 | --- | --- | --- |
-| Keil `-O2` + microlib（含 `kern-stack.c`） | 15,192 B | 约 38% |
-| Keil `-O1` | 19,636 B | 约 20% |
+| Keil `-O2` + microlib（含 `kern-stack.c`）—— 2026-10-11 实测，CR-0042/0043 之前 | 15,192 B | 约 38% |
+| Keil `-O1` —— 2026-10-11 实测，CR-0042/0043 之前 | 19,636 B | 约 20% |
 | Keil `-O0` | 溢出 | — |
-| GNU（2026-10-11 实测，`KERN_CONF_STACK_SHELL=0`） | 19,412 B | 约 21% |
+| GNU `-Os`，QBOOT_CHECK —— 2026-11-03 实测 | 21,208 B | 约 14% |
+| GNU `-Os`，QBOOT_SEALED —— 2026-11-03 实测 | 21,308 B | 约 13% |
+| GNU `-Os`，QBOOT_SEC —— 2026-11-03 实测 | 21,260 B | 约 13% |
 
 `-O0` 会溢出，单步调试 QBOOT 时须注意。
-启用 `KERN_CONF_STACK_SHELL=1` 时 GNU 构建约增加 456 B。
+启用 `KERN_CONF_STACK_SHELL=1` 时 GNU 构建约增加 456 B（2026-10-11 实测）。
+
+版本说明：2026-11-03 的 GNU 数据为分变体（CHECK/SEALED/SEC）实测，工具链
+`arm-none-eabi-gcc` 13.2.1，已含 CR-0042 入口单源化与 CR-0043 shell 格式化器改造
+（后者移除 newlib printf/malloc 族，每镜像约 -1.6 K）。较 2026-10-11 单一数值
+（19,412 B）偏大，主要是期间落了 META 双槽存储与防回滚特性——占用随特性增长、
+又随 CR-0043 回落。CH32V305 用 WCH GCC12 工具链实测：三变体 20,987–21,095 B（text）。
 
 ---
 

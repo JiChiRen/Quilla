@@ -277,6 +277,6 @@ The self-test verifies only the codec and CRC; it does not replace hardware inte
 | Frame format, CRC, command codes | `os/services/quilla-qboot/quilla-qiap.{h,c}` |
 | Partition layout, unlock key | `os/services/quilla-qboot/quilla-qboot-hal.h` |
 | CRC algorithm | `os/lib/crc16.c` |
-| Startup branching (shell / upgrade / jump to APP) | `arch/cpu/arm/<mcu>/qboot-main.c` |
+| Startup branching (shell / upgrade / jump to APP) | `os/services/quilla-qboot/qboot-main.c` |
 | QBOOT flag state | `os/services/quilla-qboot/quilla-qboot-flag.{h,c}` |
 | `swqboot` command | `os/services/quilla-qboot/quilla-app-qboot.c` |

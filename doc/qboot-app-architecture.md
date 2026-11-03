@@ -30,14 +30,14 @@
 
 | System | Responsibility | Uses OS Scheduling | Key Source Files (Suggested) |
 | --- | --- | --- | --- |
-| **QBOOT** | Flag evaluation, jumping to APP, UART QIAP reception and flashing | Reuses minimal OS (only to run the shell process) | `arch/cpu/arm/<mcu>/qboot-main.c`, `arch/cpu/arm/<mcu>/quilla-qboot-hal.c`, `os/services/quilla-qboot/{quilla-qiap.c,quilla-qboot-meta.c,quilla-qboot-flag.c}`, `quilla-shell.c`, `shellport.c`, minimal `arch/cpu/arm` HAL (rcc/gpio/uart/dma/pwr/cortex/flash), `os/sys/{process,clock,...}`, `os/lib/{crc16,ringbuf,...}` |
+| **QBOOT** | Flag evaluation, jumping to APP, UART QIAP reception and flashing | Reuses minimal OS (only to run the shell process) | `os/services/quilla-qboot/qboot-main.c` (shared boot entry), `arch/cpu/arm/<mcu>/quilla-qboot-hal.c`, `os/services/quilla-qboot/{quilla-qiap.c,quilla-qboot-meta.c,quilla-qboot-flag.c}`, `quilla-shell.c`, `shellport.c`, minimal `arch/cpu/arm` HAL (rcc/gpio/uart/dma/pwr/cortex/flash), `os/sys/{process,clock,...}`, `os/lib/{crc16,ringbuf,...}` |
 | **APP** | Business logic (display, command parsing, SPI DMA and other full features) | Full Contiki | existing full `main.c` + `arch/cpu/arm/<mcu>/quilla-qboot-hal.c` + `os/services/quilla-qboot/{quilla-qboot-meta.c,quilla-qboot-flag.c,quilla-app-qboot.c}` |
 
 The two systems **share** the same `arch/`, `os/` source tree. The only differences are:
 
 1. **Different linker scripts** (Flash region partitioning + APP VTOR relocation);
 2. **Different build source lists** (QBOOT uses the minimal set, see §4);
-3. **Different entry points and a small amount of initialization** (QBOOT uses `qboot-main.c`, APP uses `main.c`);
+3. **Different entry points and a small amount of initialization** (QBOOT uses the shared `os/services/quilla-qboot/qboot-main.c`, APP uses `main.c`);
 4. **Each calls `shell_set_partition_tag()` at runtime** (see §6).
 
 > Note: QBOOT also uses the shell (for the `part` command and optional human interaction), so the minimal OS subset that lets the shell process run (process/clock, etc.) must be retained. "Reducing QBOOT size" means **stripping APP-specific modules such as the network stack, display, SPI DMA, and CoAP/SNMP**, not going fully bare-metal. Slimming QBOOT further to bare-metal polling (no shell process scheduling) would require rewriting the shell as a polling version, a larger effort; this document defaults to "minimal OS + shell".
@@ -77,7 +77,7 @@ APP can no longer use the default `VTOR = 0x08000000`. The APP build must set `S
 
 ## 4. Build Separation Approach
 
-This repository has five build registration points per MCU (`Makefile`, `Makefile.qboot`, `.eide/eide.json`, `APP.uvprojx`, `QBOOT.uvprojx`). Per the "iron rule", every newly added `.c` must be registered in all five. **QBOOT-only files (qboot-main.c / quilla-qiap.c) go only into the QBOOT build, not into the existing APP build**, to avoid regressions.
+This repository has five build registration points per MCU (`Makefile`, `Makefile.qboot`, `.eide/eide.json`, `APP.uvprojx`, `QBOOT.uvprojx`). Per the "iron rule", every newly added `.c` must be registered in all five. **QBOOT-only files (`os/services/quilla-qboot/qboot-main.c` / `quilla-qiap.c`) go only into the QBOOT build, not into the existing APP build**, to avoid regressions.
 
 ### 4.1 Existing APP Build (Minimal Changes, Stays Usable)
 
@@ -95,10 +95,10 @@ To give APP the `swqboot` capability, **append** to the existing APP build (do n
 Add `user/<mcu>/EIDE/Makefile.qboot` (`TARGET = QBOOT`) and the QBOOT linker script (Flash `LENGTH = 24K`). `make -f Makefile.qboot` then produces `QBOOT/QBOOT.{elf,hex,bin}`. The minimal QBOOT source set (**verified symbol by symbol against the real link closure**, not estimated):
 
 - **Startup/system**: `startup_<device>xx.s` (chip reset vector + weak ISRs), `user/<mcu>/Src/system_<device>.c` (provides `SystemInit()`, called by startup after reset, configures `SystemCoreClock`).
-  - **QBOOT does not go through `platform_init_stage_one()`**: `qboot-main.c` calls `clock_init()` directly (only configures SysTick/system tick). Reason: `platform_init_stage_one → soc_init` pulls up `lpm_init()` and `rtimer_init() → rtimer_arch_init()`, and the latter **hard-depends on the MCU's LPTIM HAL and `Error_Handler()`** (provided only by `main.c`), adding both size and APP-specific symbols. QBOOT only needs "correct system clock (to guarantee the UART baud rate) + SysTick + UART", for which `clock_init()` is sufficient.
+  - **QBOOT does not go through `platform_init_stage_one()`**: `os/services/quilla-qboot/qboot-main.c` calls `clock_init()` directly (only configures SysTick/system tick). Reason: `platform_init_stage_one → soc_init` pulls up `lpm_init()` and `rtimer_init() → rtimer_arch_init()`, and the latter **hard-depends on the MCU's LPTIM HAL and `Error_Handler()`** (provided only by `main.c`), adding both size and APP-specific symbols. QBOOT only needs "correct system clock (to guarantee the UART baud rate) + SysTick + UART", for which `clock_init()` is sufficient.
 - **HAL (minimal; all use the in-repository vendor HAL copies, no external SDK dependency)**: the MCU's `hal.c`, `hal_rcc.c`, `hal_rcc_ex.c`, `hal_gpio.c`, `hal_dma.c`, `hal_pwr.c`, `hal_uart.c`, `hal_cortex.c`, `hal_flash.c`.
   - `shellport.c` brings its own `HAL_UART_MspInit` / `HAL_DMA_MspInit` (USART pin and clock configuration), so the platform's `*_hal_msp.c` is **not needed**.
-- **QBOOT business logic**: `arch/cpu/arm/<mcu>/qboot-main.c` (entry point), `arch/cpu/arm/<mcu>/quilla-qboot-hal.c` (hardware), `os/services/quilla-qboot/quilla-qiap.c`, `os/services/quilla-qboot/quilla-qboot-meta.c` (wear-levelled META store), `os/services/quilla-qboot/quilla-qboot-flag.c` (thin delegation to meta).
+- **QBOOT business logic**: `os/services/quilla-qboot/qboot-main.c` (shared entry point), `arch/cpu/arm/<mcu>/quilla-qboot-hal.c` (hardware), `os/services/quilla-qboot/quilla-qiap.c`, `os/services/quilla-qboot/quilla-qboot-meta.c` (wear-levelled META store), `os/services/quilla-qboot/quilla-qboot-flag.c` (thin delegation to meta).
 - **shell**: `os/services/shell/quilla-shell.c`, `arch/cpu/arm/<mcu>/shellport.c` (reuses the shell UART, directly obtains the `part` command).
 - **Minimal OS subset (required by symbol closure)**: `os/sys/process.c`, `os/sys/kern-guard.c`, `os/sys/clock.c`, `os/sys/etimer.c`, `os/sys/timer.c`, `os/sys/atomic.c`, `os/lib/crc16.c`, `os/lib/ringbuf.c`, `os/lib/assert.c`.
   - Dependency chain (verified one by one): `process.c` calls `kern_guard_register` / `kern_raise` (macros expanding to `kern_error_hook_default`, defined in `kern-guard.c`) → `kern-guard.c` is required; `clock.c` **unconditionally** calls `etimer_pending()` / `etimer_request_poll()` in `clock_update_ticks()` → `etimer.c` is required; `etimer.c` uses `timer_*` → `timer.c` is required; the shell uses `strcmp`/`memset` and shellport uses `strlen` → provided by `libc_nano.a` via `-specs=nano.specs`, while the linker script's `/DISCARD/ { libc.a }` only discards the **full** libc, not affecting these small functions.
@@ -155,7 +155,7 @@ The shell is common code and follows the established design of "the core does no
 
 This way: the logic for determining `qboot`/`app1` lives entirely in each system's own `main`, and the shell always stays neutral with zero hardcoding; adding a third partition in the future also only requires editing the corresponding entry point, without touching the shell.
 
-QBOOT additionally registers a `pinfo` command (`qboot-main.c`) that prints the real partition layout `[PART] APP_START=0x… APP_END=0x… APP_SIZE=0x…` from the compiled-in macros (`QUILLA_QBOOT_APP_END` = `SOC_FLASH_END`, which is MCU-specific). The host upgrader reads it, so its pre-flight flashable-size cap always matches the device instead of a hardcoded per-MCU value. `pinfo` is QBOOT-only (not in the APP shell) and, like `part`, is swallowed once the QIAP raw sink takes over.
+QBOOT additionally registers a `pinfo` command (`os/services/quilla-qboot/qboot-main.c`) that prints the real partition layout `[PART] APP_START=0x… APP_END=0x… APP_SIZE=0x…` from the compiled-in macros (`QUILLA_QBOOT_APP_END` = `SOC_FLASH_END`, which is MCU-specific). The host upgrader reads it, so its pre-flight flashable-size cap always matches the device instead of a hardcoded per-MCU value. `pinfo` is QBOOT-only (not in the APP shell) and, like `part`, is swallowed once the QIAP raw sink takes over.
 
 ---
 
@@ -385,7 +385,7 @@ python tools/quilla_host_upgrader.py COM3 app.bin --key keys/private.hex
 | `os/services/quilla-qboot/quilla-qiap.h/.c` | QBOOT-side QIAP state machine | QBOOT |
 | `os/services/quilla-qboot/quilla-qboot-hal.h` | Platform hardware interface to implement + layout constants | declarations |
 | `arch/cpu/arm/<mcu>/quilla-qboot-hal.c` | Per-MCU implementation of the above interface (Flash/reset/jump/transmit) | shared |
-| `arch/cpu/arm/<mcu>/qboot-main.c` | QBOOT entry (`main()`, UART ring, boot policy) | QBOOT |
+| `os/services/quilla-qboot/qboot-main.c` | QBOOT entry (`main()`, UART ring, boot policy; shared across ports) | QBOOT |
 
 > **Layering convention**: `os/services/quilla-qboot/*` is entirely hardware-independent and does not `include` any HAL/CMSIS headers; machine operations are dispatched via `quilla_qboot_hal_*()` down to `arch/cpu/arm/<mcu>/quilla-qboot-hal.c` (same pattern as `int-master.h`/`clock.h`). Partition layout constants are given as default values in `quilla-qboot-hal.h` via `#ifndef` and overridden with `-D` on other platforms.
 | `user/<mcu>/EIDE/py32f040xb_qboot.ld` (GD32: the equivalent QBOOT script) | QBOOT linker script | QBOOT |

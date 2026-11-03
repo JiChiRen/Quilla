@@ -96,7 +96,11 @@ void shell_input(const uint8_t *data, uint16_t len);
  * at dispatch time. */
 int shell_register_cmd(const shell_cmd_t *cmd);
 
-/* Formatted output (printf-style). Routed through the writer callback. */
+/* Formatted output (printf-style). Routed through the writer callback.
+ * Uses a built-in minimal bounded formatter (no libc printf/vsnprintf, so no
+ * malloc is pulled into the image). Supported conversions: %s %c %d %i %u
+ * %x %X %% with '0'/'-' flags, decimal field width, and the 'l' modifier
+ * (ignored; values are 32-bit). Truncation semantics match vsnprintf. */
 void shell_output(const char *fmt, ...);
 
 /* Raw NUL-terminated string output. */

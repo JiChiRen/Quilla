@@ -46,7 +46,7 @@ This document describes how, after every power-on / reset, QBOOT decides between
 
 ## 2. Phase 1: Minimal Initialization
 
-`arch/cpu/arm/<mcu>/qboot-main.c: main()`:
+`os/services/quilla-qboot/qboot-main.c: main()` (shared across all ports):
 
 ```c
 clock_init();            /* Under QBOOT_BUILD: SysTick only, no LPTIM/lpm */
@@ -274,14 +274,18 @@ Measured QBOOT footprint against the 24 KB budget:
 
 > **Note**: all figures in this section are **development-process measurements** taken during bring-up. They vary with software version and toolchain (version / optimization / LTO) changes and are **not a delivery specification**; re-measure on your own build before drawing capacity conclusions.
 
-| Toolchain / config | ROM | Headroom |
+| Toolchain / config | ROM (text) | Headroom vs 24 KB |
 | --- | --- | --- |
-| Keil `-O2` + microlib (incl. `kern-stack.c`) | 15,192 B | ~38% |
-| Keil `-O1` | 19,636 B | ~20% |
+| Keil `-O2` + microlib (incl. `kern-stack.c`) — measured 2026-10-11, pre-CR-0042/0043 | 15,192 B | ~38% |
+| Keil `-O1` — measured 2026-10-11, pre-CR-0042/0043 | 19,636 B | ~20% |
 | Keil `-O0` | Overflow | — |
-| GNU (measured 2026-10-11, `KERN_CONF_STACK_SHELL=0`) | 19,412 B | ~21% |
+| GNU `-Os`, QBOOT_CHECK — measured 2026-11-03 | 21,208 B | ~14% |
+| GNU `-Os`, QBOOT_SEALED — measured 2026-11-03 | 21,308 B | ~13% |
+| GNU `-Os`, QBOOT_SEC — measured 2026-11-03 | 21,260 B | ~13% |
 
-`-O0` overflows; be careful when single-stepping QBOOT. Enabling `KERN_CONF_STACK_SHELL=1` adds about 456 B to the GNU build.
+`-O0` overflows; be careful when single-stepping QBOOT. Enabling `KERN_CONF_STACK_SHELL=1` adds about 456 B to the GNU build (2026-10-11 measurement).
+
+Version note: the 2026-11-03 GNU figures are per-variant (CHECK/SEALED/SEC) on `arm-none-eabi-gcc` 13.2.1 after the CR-0042 entry single-sourcing and the CR-0043 shell formatter change (which removed the newlib printf/malloc family, about -1.6 K per image). They are larger than the single 2026-10-11 figure (19,412 B) mainly because the META dual-slot store and anti-rollback features landed in between — the footprint grew with features, then shrank with CR-0043. CH32V305 measured with the WCH GCC12 toolchain: 20,987–21,095 B text (all three variants).
 
 ---
 

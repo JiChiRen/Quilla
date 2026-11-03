@@ -46,7 +46,6 @@ arch/cpu/arm/
     ├── soc.{c,h}
     ├── shellport.{c,h}
     ├── lpm.{c,h}
-    ├── qboot-main.c
     ├── quilla-qboot-hal.c
     └── dev/{watchdog,qwdt,qclk}.{c,h}
 

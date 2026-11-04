@@ -1,11 +1,12 @@
-**[中文](quilla-host-upgrader-guide.zh-CN.md) · [English](quilla-host-upgrader-guide.md)**
+**[中文](quilla-host-updater-guide.zh-CN.md) · [English](quilla-host-updater-guide.md)**
 
 # Quilla QBOOT 串口升级：上位机对接说明
 
 适用对象：为 Quilla 设备开发串口升级上位机（host）的工程人员。
 
 - 协议权威定义：`doc/qboot-app-architecture.md` §8
-- 本文所述参考实现：`tools/quilla_host_upgrader.py`（Python 3.8+，仅依赖 `pyserial`）
+- 本文所述参考实现：`tools/quilla_host_updater.py`（Python 3.8+，仅依赖 `pyserial`）
+- 图形化 / 打包版替代：[`QuillaUpdater`](https://github.com/JiChiRen/QuillaUpdater)——同一协议的独立 Tk 图形界面 + 命令行（`quflash`），带预检、可协作取消、中英双语。
 
 ---
 
@@ -156,7 +157,7 @@ def build_frame(cmd, payload):
 | 会话层 | `enter()` / `send_data()` / `end()` 状态机，累计 `total_len`、`total_crc`，处理重传 |
 | UI 层 | 进度、日志、串口与固件文件选择 |
 
-参考实现中的 `Upgrader` 类即会话层，可独立于 UI 使用。
+参考实现中的 `Updater` 类即会话层，可独立于 UI 使用。
 
 ---
 
@@ -179,7 +180,7 @@ def build_frame(cmd, payload):
 
 | 方法 | 说明 |
 |---|---|
-| `Upgrader(port, baud=115200, verbose=True)` | 打开串口并清空缓冲 |
+| `Updater(port, baud=115200, verbose=True)` | 打开串口并清空缓冲 |
 | `ensure_upgrade_mode()` | 按 §3 banner 判定决定是否发送 `qiap`；同时查询 `pinfo` 取得设备真实分区布局 |
 | `enter()` | 发送 ENTER（app_start + key），落 `QIAP` 标志；`app_start` 取自设备 `pinfo` |
 | `send_data(data, base=None)` | 分片发送 DATA，返回 `(total_len, total_crc)`；`base` 默认取设备 `APP_START` |
@@ -201,16 +202,16 @@ python -m pip install pyserial
 
 ```bash
 # Windows
-python tools/quilla_host_upgrader.py COM3 app.bin
+python tools/quilla_host_updater.py COM3 app.bin
 
 # Linux
-python tools/quilla_host_upgrader.py /dev/ttyUSB0 app.bin
+python tools/quilla_host_updater.py /dev/ttyUSB0 app.bin
 
 # 指定波特率（默认 115200）
-python tools/quilla_host_upgrader.py COM3 app.bin -b 115200
+python tools/quilla_host_updater.py COM3 app.bin -b 115200
 
 # 减少输出
-python tools/quilla_host_upgrader.py COM3 app.bin -q
+python tools/quilla_host_updater.py COM3 app.bin -q
 ```
 
 ### 10.3 按 QBOOT 变体选择密钥
@@ -227,13 +228,13 @@ python tools/quilla_host_upgrader.py COM3 app.bin -q
 
 ```bash
 # QBOOT_CHECK（仅完整性，不需要密钥）
-python tools/quilla_host_upgrader.py COM3 app.bin
+python tools/quilla_host_updater.py COM3 app.bin
 
 # QBOOT_SEALED（研发态，默认(公开)钥匙）
-python tools/quilla_host_upgrader.py COM3 app.bin --key tools/_keytest/private.hex
+python tools/quilla_host_updater.py COM3 app.bin --key tools/_keytest/private.hex
 
 # QBOOT_SEC（量产态，SECURE 模式每电验签；钥匙与 SEALED 同一把）
-python tools/quilla_host_upgrader.py COM3 app.bin --key keys/product_priv.hex
+python tools/quilla_host_updater.py COM3 app.bin --key keys/product_priv.hex
 ```
 
 > 上位机**不**传版本号（从来就不传）：防回滚版本**烧录在已签名的 APP 镜像**内，即 `QUILLA_APP_SECURITY_VERSION`（固定 Flash 地址 `0x08007400`，受签名覆盖），因此上位机与 QBOOT 都不发明它。启动期与 SIGN 阶段仍强制校验防回滚下限，低于的版本被拒（见 `doc/secure-boot.md` §1.1）。"没有 `--version` 参数"不等于"没有防回滚"。
@@ -243,7 +244,7 @@ Windows 下另有批处理 `tools/quilla_app_uart_flash.bat`，用法见该文�
 ### 10.4 离线自检
 
 ```bash
-python tools/quilla_host_upgrader.py --self-test
+python tools/quilla_host_updater.py --self-test
 ```
 
 自检覆盖帧编解码往返（ENTER / DATA / END 三种命令）与链式 CRC 累加一致性

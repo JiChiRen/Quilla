@@ -36,7 +36,7 @@ APP 镜像携带一个 32 位安全版本（`QUILLA_APP_SECURITY_VERSION`），�
 **第二层——APP 侧混淆（`QUILLA_APP_SECVER_SELFCHECK`，默认开）。**
 APP 在启动期额外对 Flash 中的该区域做自检（`quilla_app_secver_selfcheck()`），若 magic / version 内部不一致则停机。**诚实边界——依赖前请先读：** 这是**混淆（obfuscation），不是安全控制**。它唯一的作用是**抬高被授权私钥的终端用户的门槛**——这类用户本可定位二进制里显性的安全版本字节、改大、重新签名，用一行修改就绕过 QBOOT 闸门。它**挡不住**持有私钥的坚定攻击者：区域与编译期常量都在被签名镜像内、受签名覆盖，持钥匙者总能造出一致的（`magic`, `version`）对并重新签名。真正的闸门仍是第一层（签名 + 下限）；量产地仍须**健全的私钥授权**，而能挡住持钥匙者回滚的唯一控制是**硬件单调计数器（eFuse/OTP）**。若干扰调试流程，可用 `-DQUILLA_APP_SECVER_SELFCHECK=0` 关闭第二层。
 
-> **密钥管理推论：** 因版本已是签名镜像的一部分，上位机升级工具（`quilla_host_upgrader.py`）不再传输版本——它只发镜像，版本归属签它的人。无钥匙（QBOOT_CHECK）安装仍写完整性 manifest、把版本当作下限占位，但那里不强制防回滚（无钥匙 ⇒ 无可信下限）。
+> **密钥管理推论：** 因版本已是签名镜像的一部分，上位机升级工具（`quilla_host_updater.py`）不再传输版本——它只发镜像，版本归属签它的人。无钥匙（QBOOT_CHECK）安装仍写完整性 manifest、把版本当作下限占位，但那里不强制防回滚（无钥匙 ⇒ 无可信下限）。
 
 **未编译任何公钥**（pubkey 全 0xFF）→ 步骤 2、3 自动跳过，仅保留步骤 1 的完整性。
 这是历史"无钥匙"状态，现对应构建变体 **QBOOT_CHECK**。
@@ -59,7 +59,7 @@ APP 在启动期额外对 Flash 中的该区域做自检（`quilla_app_secver_se
 - 启动只做 SHA-256 比对，不验签、不认来源、不防回滚。
 - **不声称 secure boot**：它只能保证"镜像没在传输 / 烧录中损坏"，不能保证"镜像来自可信方"。
 - 无需任何钥匙管理，开箱即用，适合开发调试与对真实性无要求的内部 / 封闭场景。
-- 升级时由 QIAP 的 END 帧写入完整性 manifest（见 `doc/quilla-host-upgrader-guide.md` §10）；该 manifest 不含可信签名，签名域写 0。
+- 升级时由 QIAP 的 END 帧写入完整性 manifest（见 `doc/quilla-host-updater-guide.md` §10）；该 manifest 不含可信签名，签名域写 0。
 
 ### 2.2 QBOOT_SEALED（SEALED 启动模式，默认(公开)钥匙）
 
@@ -102,7 +102,7 @@ SEALED 与 SEC 两个变体编译进的是**同一把钥匙**：默认是随仓�
 
 1. **离线生成**：`tools/quilla_ed25519_sign.py keygen` → 产出 `private.hex`（私钥）+ `public.hex`（公钥）。
 2. **公钥编入 QBOOT**：把自有公钥以 `-DQUILLA_SECURE_BOOT_PUBKEY={...}` 或产品宏编入，替换默认的 `QUILLA_QBOOT_DEFAULT_KEY` 分支；分支模板见 `os/services/quilla-qboot/quilla-qboot-pubkey.h` 头注释与 `tools/README.md`。
-3. **私钥只留签名工位**，离线保存，**绝不进固件或仓库**；烧录时由 `quilla_host_upgrader.py --key` 指向它（见 `doc/quilla-host-upgrader-guide.md` §10.3）。
+3. **私钥只留签名工位**，离线保存，**绝不进固件或仓库**；烧录时由 `quilla_host_updater.py --key` 指向它（见 `doc/quilla-host-updater-guide.md` §10.3）。
 
 > 若仍编译进默认公钥，头文件会发 `#warning`（`QUILLA_PRODUCTION_BUILD` 时更醒目）提醒替换——
 > **是否替换由客户决定**，但流出默认钥匙等于把私钥交给任何人（任何人都能签出设备接受的镜像），
@@ -137,7 +137,7 @@ SEALED 与 SEC 两个变体编译进的是**同一把钥匙**：默认是随仓�
 
 对 SEALED / SEC 变体，这同时也是 §2.4 量产安全前提的一部分：除走 QIAP 外，量产还须确保不存在其它可绕过签名的直写 Flash 入口。
 
-参考实现与命令见 `doc/quilla-host-upgrader-guide.md` §10。
+参考实现与命令见 `doc/quilla-host-updater-guide.md` §10。
 
 ---
 

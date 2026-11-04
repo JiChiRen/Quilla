@@ -19,7 +19,7 @@
 #                  verify the WCH fast-interrupt path (see the job's comment).
 #
 #   host-tools   : runs the Python host-side tooling self-tests — the Ed25519
-#                  signing utility and the serial OTA upgrader shipped to
+#                  signing utility and the serial OTA updater shipped to
 #                  integrators.
 #
 # The workflow builds out-of-tree under each MCU's EIDE directory, so a fresh
@@ -133,5 +133,5 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Run upgrader self-test
-        run: python tools/quilla_host_upgrader.py --self-test
+      - name: Run updater self-test
+        run: python tools/quilla_host_updater.py --self-test

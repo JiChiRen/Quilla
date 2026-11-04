@@ -1,11 +1,12 @@
-**[English](quilla-host-upgrader-guide.md) · [中文](quilla-host-upgrader-guide.zh-CN.md)**
+**[English](quilla-host-updater-guide.md) · [中文](quilla-host-updater-guide.zh-CN.md)**
 
 # Quilla QBOOT Serial Upgrade: Host Integration Guide
 
 Audience: engineers developing a serial-upgrade host for Quilla devices.
 
 - Authoritative protocol definition: `doc/qboot-app-architecture.md` §8
-- Reference implementation described here: `tools/quilla_host_upgrader.py` (Python 3.8+, depends only on `pyserial`)
+- Reference implementation described here: `tools/quilla_host_updater.py` (Python 3.8+, depends only on `pyserial`)
+- GUI / packaged alternative: [`QuillaUpdater`](https://github.com/JiChiRen/QuillaUpdater) — a standalone Tk GUI and CLI (`quflash`) implementing this same protocol, with pre-flight checks, cooperative cancel and a bilingual UI.
 
 ---
 
@@ -154,7 +155,7 @@ Conventions:
 | Session layer | `enter()` / `send_data()` / `end()` state machine, accumulating `total_len` and `total_crc`, handling retransmission |
 | UI layer | Progress, logging, serial port and firmware file selection |
 
-The `Upgrader` class in the reference implementation is the session layer and can be used independently of the UI.
+The `Updater` class in the reference implementation is the session layer and can be used independently of the UI.
 
 ---
 
@@ -177,7 +178,7 @@ Constants are taken from `quilla-qboot-hal.h` and `quilla-qiap.h`:
 
 | Method | Description |
 |---|---|
-| `Upgrader(port, baud=115200, verbose=True)` | Open the serial port and flush the buffer |
+| `Updater(port, baud=115200, verbose=True)` | Open the serial port and flush the buffer |
 | `ensure_upgrade_mode()` | Decide whether to send `qiap` based on the §3 banner determination; also queries `pinfo` to learn the device's real partition layout |
 | `enter()` | Send ENTER (app_start + key), set the `QIAP` flag; `app_start` comes from the device `pinfo` |
 | `send_data(data, base=None)` | Send DATA in chunks, returning `(total_len, total_crc)`; `base` defaults to the device `APP_START` |
@@ -199,16 +200,16 @@ python -m pip install pyserial
 
 ```bash
 # Windows
-python tools/quilla_host_upgrader.py COM3 app.bin
+python tools/quilla_host_updater.py COM3 app.bin
 
 # Linux
-python tools/quilla_host_upgrader.py /dev/ttyUSB0 app.bin
+python tools/quilla_host_updater.py /dev/ttyUSB0 app.bin
 
 # Specify the baud rate (default 115200)
-python tools/quilla_host_upgrader.py COM3 app.bin -b 115200
+python tools/quilla_host_updater.py COM3 app.bin -b 115200
 
 # Reduce output
-python tools/quilla_host_upgrader.py COM3 app.bin -q
+python tools/quilla_host_updater.py COM3 app.bin -q
 ```
 
 ### 10.3 Selecting the Key by QBOOT Variant
@@ -225,13 +226,13 @@ Examples:
 
 ```bash
 # QBOOT_CHECK (integrity only, no key required)
-python tools/quilla_host_upgrader.py COM3 app.bin
+python tools/quilla_host_updater.py COM3 app.bin
 
 # QBOOT_SEALED (R&D state, default (public) key)
-python tools/quilla_host_upgrader.py COM3 app.bin --key tools/_keytest/private.hex
+python tools/quilla_host_updater.py COM3 app.bin --key tools/_keytest/private.hex
 
 # QBOOT_SEC (mass-production state, SECURE mode verifies the signature on every power cycle; the key is the same one as SEALED's)
-python tools/quilla_host_upgrader.py COM3 app.bin --key keys/product_priv.hex
+python tools/quilla_host_updater.py COM3 app.bin --key keys/product_priv.hex
 ```
 
 > The host does **not** supply a version number (and never did): the anti-rollback version is **baked into the signed APP image** as `QUILLA_APP_SECURITY_VERSION` (at the fixed Flash address `0x08007400`, covered by the signature), so neither the host nor QBOOT invents it. The anti-rollback floor is still enforced at boot and at the SIGN stage; a lower-version image is refused (see `doc/secure-boot.md` §1.1). Do not confuse "no `--version` argument" with "no anti-rollback".
@@ -241,7 +242,7 @@ On Windows there is also the batch file `tools/quilla_app_uart_flash.bat`; see t
 ### 10.4 Offline Self-Test
 
 ```bash
-python tools/quilla_host_upgrader.py --self-test
+python tools/quilla_host_updater.py --self-test
 ```
 
 The self-test covers the frame codec round trip (ENTER / DATA / END commands) and chained CRC accumulation consistency

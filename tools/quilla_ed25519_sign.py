@@ -4,7 +4,7 @@
 Quilla firmware signing key utility (RFC 8032 Ed25519).
 
 Pure standard library: no third-party crypto, so it can run anywhere the
-host upgrader runs. Signing only -- the device verifies, never signs.
+host updater runs. Signing only -- the device verifies, never signs.
 
 The arithmetic is the textbook Edwards curve implementation (a = -1,
 d = -121665/121666) over GF(2^255-19); it is checked against the RFC 8032

@@ -76,14 +76,16 @@ Build the bootloader with the GNU `arm-none-eabi` toolchain (per-MCU makefiles u
 
 ```bash
 # Flash an APP image over the serial port (QBOOT must be present on target)
-python tools/quilla_host_upgrader.py <COM> app.bin -b 115200
+python tools/quilla_host_updater.py <COM> app.bin -b 115200
 
 # Generate your own keypair and sign an image (replace the in-repo sample key before shipping)
 python tools/quilla_ed25519_sign.py keygen
 python tools/quilla_ed25519_sign.py sign --key private.hex app.bin
 ```
 
-See [`doc/keil-qboot-app-build.md`](doc/keil-qboot-app-build.md) for full build steps and [`doc/quilla-host-upgrader-guide.md`](doc/quilla-host-upgrader-guide.md) for the upgrade tool.
+See [`doc/keil-qboot-app-build.md`](doc/keil-qboot-app-build.md) for full build steps and [`doc/quilla-host-updater-guide.md`](doc/quilla-host-updater-guide.md) for the upgrade tool.
+
+> **Prefer a graphical tool?** [`QuillaUpdater`](https://github.com/JiChiRen/QuillaUpdater) is a standalone Tk GUI (plus the same engine on the CLI, `quflash`) for this exact QIAP upgrade flow — pick a port, pick a `.bin`, click start. It adds pre-flight checks, cooperative cancel and a bilingual UI. Python 3.8+, `pyserial` only, no Qt/Node/installer.
 
 ## Documentation
 
@@ -92,7 +94,7 @@ Entry point and reader navigation: [`doc/Home.md`](doc/Home.md) (English) ·
 
 - **Application developers** (architecture / protocols / secure boot / flows / API contract):
   `doc/qboot-app-architecture.md`, `doc/secure-boot.md`, `doc/boot-flow.md`, `doc/upgrade-flow.md`,
-  `doc/quilla-host-upgrader-guide.md`, `doc/app-api-reference.md`
+  `doc/quilla-host-updater-guide.md`, `doc/app-api-reference.md`
 - **Porters / APP developers** (MCU adaptation / calling OS APIs):
   `doc/port-layout.md`, `doc/cmsis-layout.md`, `doc/keil-qboot-app-build.md`
 - **Coding guidelines** (the MISRA C:2012 rule set applied to Quilla's own code, and what is out of scope):

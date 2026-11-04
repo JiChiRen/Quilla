@@ -62,7 +62,7 @@ make -f Makefile.qboot.sec    # -> QBOOT_SEC     （每次启动 Ed25519 验签�
 
 ## 6. 产物与烧录
 
-每个目标在其构建目录下产出 `.elf`、`.hex` 与 `.bin`。将 QBOOT 烧到 `0x08000000`、APP 烧到 `0x08007000`（主机升级工具在运行时经 `pinfo` shell 命令从设备读取精确的 APP 区间，无需按 MCU 硬编码）。经串口升级 APP 用 `tools/quilla_host_upgrader.py` —— 见 `doc/quilla-host-upgrader-guide.md`。
+每个目标在其构建目录下产出 `.elf`、`.hex` 与 `.bin`。将 QBOOT 烧到 `0x08000000`、APP 烧到 `0x08007000`（主机升级工具在运行时经 `pinfo` shell 命令从设备读取精确的 APP 区间，无需按 MCU 硬编码）。经串口升级 APP 用 `tools/quilla_host_updater.py` —— 见 `doc/quilla-host-updater-guide.md`。
 
 > 用调试器分别烧 QBOOT 与 APP 时，**按扇区擦除，切勿整片擦除**——整片擦除会连 META 区（flag + manifest）一起抹掉。
 

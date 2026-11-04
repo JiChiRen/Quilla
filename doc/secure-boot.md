@@ -36,7 +36,7 @@ The APP image carries a 32-bit security version (`QUILLA_APP_SECURITY_VERSION`) 
 **Layer 2 — APP-side obfuscation (`QUILLA_APP_SECVER_SELFCHECK`, default ON).**
 The APP additionally self-checks the in-Flash region at startup (`quilla_app_secver_selfcheck()`) and halts if the magic / version is internally inconsistent. **Honest scope — read before relying on it:** this is **OBFUSCATION, not a security control**. Its only purpose is to raise the bar for an **authorized-key end user** who would otherwise locate the explicit security-version bytes in the binary, bump them, and re-sign — defeating the QBOOT gate with a one-line edit. It does **not** stop a determined attacker who holds the private key: both the region and the baked constant live in the signed image and are covered by the signature, so a key holder can always produce a consistent (`magic`, `version`) pair and re-sign. The real gate remains Layer 1 (signature + floor); production still requires **disciplined private-key authorization**, and a **hardware monotonic counter (eFuse/OTP)** is the only control that stops a key holder from rolling back. Disable Layer 2 with `-DQUILLA_APP_SECVER_SELFCHECK=0` if it interferes with a debug workflow.
 
-> **Key-management consequence:** because the version is part of the signed image, the host upgrader (`quilla_host_upgrader.py`) no longer transmits a version — it sends only the image; the version is whoever signed it. A no-key (QBOOT_CHECK) install still writes an integrity-only manifest and treats the version as a floor placeholder, but anti-rollback is not enforced there (no key ⇒ no trusted floor).
+> **Key-management consequence:** because the version is part of the signed image, the host updater (`quilla_host_updater.py`) no longer transmits a version — it sends only the image; the version is whoever signed it. A no-key (QBOOT_CHECK) install still writes an integrity-only manifest and treats the version as a floor placeholder, but anti-rollback is not enforced there (no key ⇒ no trusted floor).
 
 **No public key compiled at all** (pubkey all 0xFF) → steps 2 and 3 are automatically skipped, leaving only the integrity check of step 1.
 This is the historical "keyless" state, now corresponding to the build variant **QBOOT_CHECK**.
@@ -59,7 +59,7 @@ Their boot policies and applicable scenarios are as follows:
 - Boot performs only the SHA-256 comparison: no signature verification, no origin authentication, no anti-rollback.
 - **Does not claim secure boot**: it can only guarantee that "the image was not corrupted during transfer / flashing", not that "the image comes from a trusted party".
 - Requires no key management at all and works out of the box; suitable for development debugging and internal / closed scenarios with no authenticity requirement.
-- During upgrade, the integrity manifest is written by QIAP's END frame (see `doc/quilla-host-upgrader-guide.md` §10); this manifest contains no trusted signature; the signature field is 0.
+- During upgrade, the integrity manifest is written by QIAP's END frame (see `doc/quilla-host-updater-guide.md` §10); this manifest contains no trusted signature; the signature field is 0.
 
 ### 2.2 QBOOT_SEALED (SEALED boot mode, default (public) key)
 
@@ -102,7 +102,7 @@ The SEALED and SEC variants compile in the **same key**: by default it is the "d
 
 1. **Offline generation**: `tools/quilla_ed25519_sign.py keygen` → produces `private.hex` (private key) + `public.hex` (public key).
 2. **Public key compiled into QBOOT**: compile your own public key via `-DQUILLA_SECURE_BOOT_PUBKEY={...}` or a product macro, replacing the default `QUILLA_QBOOT_DEFAULT_KEY` branch; the branch template is in the header comments of `os/services/quilla-qboot/quilla-qboot-pubkey.h` and in `tools/README.md`.
-3. **Private key stays only at the signing station**, stored offline, **never entering firmware or the repository**; during flashing, point to it with `quilla_host_upgrader.py --key` (see `doc/quilla-host-upgrader-guide.md` §10.3).
+3. **Private key stays only at the signing station**, stored offline, **never entering firmware or the repository**; during flashing, point to it with `quilla_host_updater.py --key` (see `doc/quilla-host-updater-guide.md` §10.3).
 
 > If the default public key is still compiled in, the header will emit a `#warning` (more prominent with `QUILLA_PRODUCTION_BUILD`) reminding replacement —
 > **whether to replace is up to the customer**, but leaking the default key is equivalent to handing the private key to anyone (anyone can sign images accepted by the device),
@@ -139,7 +139,7 @@ Regardless of variant, APP installation / recovery must go through the **QIAP se
 
 For SEALED / SEC, this is also part of the §2.4 mass-production security prerequisite: beyond using QIAP, mass production must ensure no other direct-write-Flash entry point that bypasses the signature exists.
 
-For the reference implementation and commands see `doc/quilla-host-upgrader-guide.md` §10.
+For the reference implementation and commands see `doc/quilla-host-updater-guide.md` §10.
 
 ---
 

@@ -84,14 +84,16 @@ Quilla 针对低资源微控制器上开源信息安全系统相对稀缺的现�
 
 ```bash
 # 通过串口烧录 APP 镜像（目标须已烧 QBOOT）
-python tools/quilla_host_upgrader.py <COM> app.bin -b 115200
+python tools/quilla_host_updater.py <COM> app.bin -b 115200
 
 # 生成自有密钥对并签名镜像（量产前须替换仓库内的示例公钥）
 python tools/quilla_ed25519_sign.py keygen
 python tools/quilla_ed25519_sign.py sign --key private.hex app.bin
 ```
 
-完整构建步骤见 [`doc/keil-qboot-app-build.md`](doc/keil-qboot-app-build.md)，升级工具见 [`doc/quilla-host-upgrader-guide.md`](doc/quilla-host-upgrader-guide.md)。
+完整构建步骤见 [`doc/keil-qboot-app-build.md`](doc/keil-qboot-app-build.md)，升级工具见 [`doc/quilla-host-updater-guide.md`](doc/quilla-host-updater-guide.md)。
+
+> **想要图形化工具？** [`QuillaUpdater`](https://github.com/JiChiRen/QuillaUpdater) 是同一套 QIAP 升级流程的独立 Tk 图形上位机（命令行 `quflash` 同引擎）——选串口、选 `.bin`、点开始；带预检、可协作取消、中英双语。Python 3.8+，仅依赖 `pyserial`，无需 Qt/Node/安装包。
 
 ## 文档
 
@@ -99,7 +101,7 @@ python tools/quilla_ed25519_sign.py sign --key private.hex app.bin
 
 - **应用开发者**（整体功能 / 架构 / 协议 / 安全启动 / 流程 / 接口契约）：
   `doc/qboot-app-architecture.md`、`doc/secure-boot.md`、`doc/boot-flow.md`、`doc/upgrade-flow.md`、
-  `doc/quilla-host-upgrader-guide.md`、`doc/app-api-reference.md`
+  `doc/quilla-host-updater-guide.md`、`doc/app-api-reference.md`
 - **移植者 / 应用开发者**（MCU 适配 / APP 调用 OS API）：
   `doc/port-layout.md`、`doc/cmsis-layout.md`、`doc/keil-qboot-app-build.md`
 - **编码规范**（Quilla 自有代码遵循的 MISRA C:2012 规则与排除范围）：

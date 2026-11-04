@@ -11,7 +11,7 @@ REM Falls back to the other bin only if the preferred one is absent.
 REM Build it FIRST yourself: make -C user\py32f040xb\EIDE all (or in Keil/EIDE).
 REM This wrapper does NOT compile; it only flashes an already-built bin.
 REM
-REM Step 2 hands the bin to the reference host upgrader over USART2 PA2/PA3.
+REM Step 2 hands the bin to the reference host updater over USART2 PA2/PA3.
 REM This wrapper is deliberately ASCII-only: the path contains spaces and the
 REM console is GBK, so non-ASCII here breaks parsing.
 REM
@@ -135,7 +135,7 @@ goto :parse_args
 
 if "%PROBE%"=="1" (
   echo [probe] QBOOT upgrade-state probe [QIAP] on %PORT% @ %BAUD%
-  "%PY%" "%ROOT%\tools\quilla_host_upgrader.py" %PORT% -b %BAUD% --probe
+  "%PY%" "%ROOT%\tools\quilla_host_updater.py" %PORT% -b %BAUD% --probe
   set "RC=%ERRORLEVEL%"
   if not "%RC%"=="0" echo [X] probe exited with %RC%
   exit /b %RC%
@@ -152,7 +152,7 @@ REM ---------------------------------------------------------------------------
 REM IMPORTANT: this wrapper does NOT compile the firmware. Building is the
 REM developer's job -- run `make -C "%EIDE%" all` (or build in Keil/EIDE)
 REM yourself BEFORE flashing. Here we only select an existing bin and hand it
-REM to the host upgrader.
+REM to the host updater.
 REM ---------------------------------------------------------------------------
 
 REM Choose the binary. By default the GNU (EIDE) build is authoritative; /M
@@ -198,10 +198,10 @@ set "EXTRA="
 if not "%KEYARG%"=="" set "EXTRA=--key "%KEYABS%""
 if not "%VERARG%"=="" set "EXTRA=%EXTRA% --version %VERARG%"
 if not "%KEYARG%"=="" echo [*] secure boot: SIGN frame via key %KEYABS% (version %VERARG%)
-"%PY%" "%ROOT%\tools\quilla_host_upgrader.py" %PORT% "%BIN%" -b %BAUD% %EXTRA%
+"%PY%" "%ROOT%\tools\quilla_host_updater.py" %PORT% "%BIN%" -b %BAUD% %EXTRA%
 set "RC=%ERRORLEVEL%"
 if not "%RC%"=="0" (
-  echo [X] upgrader exited with %RC%
+  echo [X] updater exited with %RC%
   exit /b %RC%
 )
 echo [OK] done

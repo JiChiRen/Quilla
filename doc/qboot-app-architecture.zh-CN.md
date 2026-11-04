@@ -351,7 +351,7 @@ python tools/quilla_ed25519_sign.py keygen --dir keys
 私钥只留在产线，烧录时：
 
 ```bash
-python tools/quilla_host_upgrader.py COM3 app.bin --key keys/private.hex
+python tools/quilla_host_updater.py COM3 app.bin --key keys/private.hex
 ```
 
 ---

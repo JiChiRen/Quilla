@@ -42,11 +42,11 @@ Strictly mirrors the firmware-side protocol (see doc/qboot-app-architecture.md Â
 
 Usage:
     pip install pyserial
-    python quilla_host_upgrader.py COM3 app.bin             # Windows
-    python quilla_host_upgrader.py /dev/ttyUSB0 app.bin     # Linux
-    python quilla_host_upgrader.py COM3 app.bin -b 115200
-    python quilla_host_upgrader.py COM3 app.bin --key keys/private.hex
-    python quilla_host_upgrader.py --self-test              # offline self-check (no serial)
+    python quilla_host_updater.py COM3 app.bin             # Windows
+    python quilla_host_updater.py /dev/ttyUSB0 app.bin     # Linux
+    python quilla_host_updater.py COM3 app.bin -b 115200
+    python quilla_host_updater.py COM3 app.bin --key keys/private.hex
+    python quilla_host_updater.py --self-test              # offline self-check (no serial)
 
 This file is the reference baseline for a production host; a UI can be layered on
 top (Qt/C#/Electron, etc.), and the protocol layer (frame codec, session state
@@ -117,33 +117,30 @@ REASON = {
 APP_START = 0x08007000          # default/fallback (= META_BASE + META_SIZE, same for all MCUs)
 
 # The following three are instance attributes filled in at run time from the
-# device's 'pinfo' output; see Upgrader.__init__ and fetch_partition(). The module
+# device's 'pinfo' output; see Updater.__init__ and fetch_partition(). The module
 # level no longer keeps hard-coded APP_END/APP_SIZE/MAX_IMAGE_SIZE.
 
 # unlock key (quilla-qboot-hal.h: QUILLA_QBOOT_UNLOCK_KEY, default "QULLOTA1")
 UNLOCK_KEY = bytes([0x51, 0x55, 0x4C, 0x4C, 0x4F, 0x54, 0x41, 0x31])
 
 PAGE_SIZE = 256                 # QUILLA_QBOOT_PAGE_SIZE
-# Upper bound of data bytes per DATA frame.
+# Data bytes per DATA frame: exactly one Flash page.
 #
-# Why 48 and not 256: the firmware USART2 RX is 64-byte NORMAL-DMA (ping-pong),
-# and the DATA dispatch synchronously erases a whole Flash page (~25-40 ms) inside
-# the DMA receive interrupt, while the DMA re-arm (HAL_UART_Receive_DMA) runs only
-# after feed()/erase. Hence:
-#   - For a frame > 64 B, the first 64 B trigger TC->harvest->dispatch->erase;
-#     during those tens of ms the DMA is stopped and the rest of the frame is
-#     lost -> the device side always sees a CRC error.
-#   - ENTER writes a single word (fast), so a 15-byte ENTER is fine; a 270-byte
-#     DATA always fails.
-# The only robust workaround is to keep EVERY frame <= 64 B in total: it fits in a
-# single DMA buffer, IDLE harvests only after the whole frame arrives, and by the
-# time dispatch runs the frame is already complete; the host also waits for each
-# ACK before sending the next frame, so the USB adapter does not over-buffer.
-# frame = SOF(1)+CMD(1)+LEN(2)+payload(8 addr+CHUNK)+CRC(2) = 14 + CHUNK,
-# so CHUNK <= 50; 48 leaves 2 B of margin. The firmware-side permanent fix is
-# tracked as a TODO in doc/upgrade-flow.md.
-CHUNK = 48
-MAX_PAYLOAD = PAGE_SIZE + 8     # QUILLA_QIAP_MAX_PAYLOAD (= 264, far above a single 56-byte frame)
+# The firmware USART2 RX is a CIRCULAR-mode DMA over a 1024-byte ring that never
+# re-arms, so there is no re-arm window and NO per-frame size cap from the DMA
+# (the old 64-byte NORMAL-DMA constraint that forced CHUNK=48 is gone). One page
+# per frame is the sweet spot:
+#   - frame = SOF(1)+CMD(1)+LEN(2)+payload(8 addr+CHUNK)+CRC(2) = 14 + CHUNK,
+#     so a 256-byte chunk is a 270-byte frame, absorbed by the QBOOT 512-byte
+#     second-stage ring in one shot;
+#   - one frame == one flash page, so flash_write_range commits one
+#     erase+program+verify per frame with no cross-frame partial-page staging;
+#   - 5.3x fewer frames than the old 48-byte chunk => 5.3x fewer stop-and-wait
+#     ACK round-trips, which is the real cost on a USB-serial link.
+# The device caps a frame payload at QUILLA_QIAP_MAX_PAYLOAD = PAGE_SIZE + 8
+# = 264 = 8 + CHUNK, so 256 is exactly the largest chunk the parser accepts.
+CHUNK = 256
+MAX_PAYLOAD = PAGE_SIZE + 8     # QUILLA_QIAP_MAX_PAYLOAD (= 264 = 8 addr + CHUNK)
 
 # Communication parameters
 ACK_TIMEOUT = 2.0               # per-frame ACK timeout (seconds)
@@ -163,7 +160,7 @@ SIGN_TIMEOUT = 90.0             # SIGN ACK timeout (seconds); must exceed the de
 # SECURE.
 APP_STAMP_TIMEOUT = 45.0
 
-# Banner fallback wait: see the note in Upgrader.ensure_upgrade_mode()
+# Banner fallback wait: see the note in Updater.ensure_upgrade_mode()
 DEFAULT_BANNER_TIMEOUT = 15.0
 
 
@@ -197,8 +194,8 @@ def build_frame(cmd, payload):
     return bytes([SOF]) + body + struct.pack("<H", crc)
 
 
-# ---- Upgrader ------------------------------------------------------------------
-class Upgrader:
+# ---- Updater ------------------------------------------------------------------
+class Updater:
     def __init__(self, port, baud=115200, verbose=True,
                  banner_timeout=DEFAULT_BANNER_TIMEOUT):
         try:
@@ -355,27 +352,12 @@ class Upgrader:
         return None
 
     def _send_frame(self, cmd, payload):
-        frame = build_frame(cmd, payload)
-        self._write_paced(frame)
-
-    def _write_paced(self, data, chunk=64, delay=0.012):
-        """Send in chunks with an inter-chunk delay.
-
-        The device RX is 64-byte NORMAL-DMA; every 64 bytes received it must, in
-        the interrupt, HAL_UART_DMAStop + HAL_UART_Receive_DMA to re-arm the DMA;
-        during that window the USART has no FIFO and arriving bytes are dropped
-        (ORE). A single 270-byte DATA frame triggers 4 re-arms and necessarily
-        loses bytes -> CRC NAK. Here a frame is split into <=64-byte chunks with
-        an inter-chunk sleep far larger than the re-arm cost, so the device has
-        re-armed before the next chunk arrives. This is a host-side verification
-        workaround; the firmware should move to CIRCULAR DMA + a large buffer as
-        the permanent fix.
-        """
-        n = len(data)
-        for i in range(0, n, chunk):
-            self.ser.write(data[i:i + chunk])
-            if i + chunk < n:
-                time.sleep(delay)
+        # The device RX is a CIRCULAR DMA over a 1024-byte ring that never
+        # re-arms, so no host-side pacing is needed -- write the whole frame at
+        # once. (The old 64-byte/12 ms pacing only dodged the NORMAL-DMA re-arm
+        # window and just wasted time.) Stop-and-wait per frame keeps the
+        # USB-serial adapter from over-buffering.
+        self.ser.write(build_frame(cmd, payload))
 
     def _transact(self, cmd, payload, ack_cmd, retries=MAX_RETRIES,
                   timeout=ACK_TIMEOUT):
@@ -492,25 +474,47 @@ class Upgrader:
         in_qboot = ("qboot" in part_txt) or ("[BOOT]" in text0)
 
         if not in_qboot:
-            # C or D or completely unresponsive. First try ENTER directly (covers
-            # D: in the upgrade-idle state part is swallowed but the ENTER binary
-            # frame still enters the state machine); on failure fall through to
-            # swqboot (covers C).
-            self.log("[*] Not a QBOOT shell (part=%r); trying ENTER directly first (covers upgrade-idle)..."
-                     % part)
-            try:
-                self.enter()
-                return
-            except Exception as e:
-                self.log("[!] Direct ENTER failed: %s" % e)
+            # Two distinct non-QBOOT states need DIFFERENT handling:
+            #   C) APP shell alive -> `part` echoes (e.g. "app1"). The shell owns
+            #      the line scanner, so a binary ENTER frame is counter-productive:
+            #      its printable bytes (app_start 0x70='p' + the "QULLOTA1" key)
+            #      land in the 128-byte line buffer with NO terminator, and the
+            #      later 'swqboot\n' is glued behind that garbage and never matches
+            #      a command. So do NOT send ENTER here -- go straight to swqboot.
+            #   D) upgrade-idle (a prior QIAP flag is set): the raw sink swallows
+            #      `part`, so it comes back empty; only a binary ENTER works.
+            if part_txt.strip():
+                self.log("[*] APP shell alive (part=%r); skipping binary ENTER "
+                         "(it would corrupt the shell line), going to swqboot..." % part)
+            else:
+                self.log("[*] No shell response (upgrade-idle?); trying ENTER directly...")
+                try:
+                    self.enter()
+                    return
+                except Exception as e:
+                    self.log("[!] Direct ENTER failed: %s" % e)
 
             # C: APP shell -> swqboot reset into the QBOOT shell.
+            # Flush the line buffer first: anything still in it (a partial command,
+            # or the printable leftovers of a failed binary ENTER) has no
+            # terminator, so a bare 'swqboot\n' would be appended behind it. A CR
+            # terminates/clears that line before the real command goes out.
             self.log("[*] Sending 'swqboot' to reset into QBOOT ...")
-            self.ser.reset_input_buffer()
-            self.ser.write(b"swqboot\n")
-            if not self._wait_text(b"[BOOT]", timeout=6.0):
-                self.log("[!] No '[BOOT]' banner after swqboot "
-                         "(the reset may not have happened / the flag write failed / still in the APP)")
+            got_boot = False
+            for attempt in range(1, 3):
+                self.ser.reset_input_buffer()
+                self.ser.write(b"\r\n")     # terminate/clear any pending line
+                time.sleep(0.1)
+                self.ser.write(b"swqboot\n")
+                if self._wait_text(b"[BOOT]", timeout=6.0):
+                    got_boot = True
+                    break
+                self.log("[!] swqboot attempt %d: no '[BOOT]' banner "
+                         "(reset may not have happened / flag write failed / still in the APP)"
+                         % attempt)
+            if not got_boot:
+                self.log("[!] swqboot did not drop the board into the QBOOT shell; "
+                         "type 'swqboot' manually at the APP prompt, then re-run")
             self.ser.reset_input_buffer()
 
         # We should now be in the QBOOT shell (or the upgrade-idle state). Before
@@ -636,7 +640,7 @@ class Upgrader:
           * progress is printed every 5 s while waiting, so it is not mistaken
             for a hang;
           * on timeout it raises RuntimeError, which main() turns into a non-zero
-            exit code; the .bat then prints "[X] upgrader exited with N" rather
+            exit code; the .bat then prints "[X] updater exited with N" rather
             than "[OK] done", never falsely reporting success.
         """
         needle = b"[QAPP]"
@@ -797,7 +801,7 @@ def main():
         return
 
     if args.probe:
-        up = Upgrader(args.port, args.baud, verbose=True,
+        up = Updater(args.port, args.baud, verbose=True,
                       banner_timeout=args.banner_timeout)
         try:
             banner = up._drain_text(timeout=4.0)
@@ -822,7 +826,7 @@ def main():
 
     up = None
     try:
-        up = Upgrader(args.port, args.baud, verbose=not args.quiet,
+        up = Updater(args.port, args.baud, verbose=not args.quiet,
                       banner_timeout=args.banner_timeout)
         up.run(args.binfile, key_path=args.key)
     except KeyboardInterrupt:

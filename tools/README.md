@@ -8,13 +8,13 @@ Quilla toolset. Only the tools below ship in this public repository, and they co
 
 | Tool | Purpose |
 |------|---------|
-| `quilla_host_upgrader.py` | Flash a QAPP over UART: `python quilla_host_upgrader.py <COM> app.bin -b 115200` |
+| `quilla_host_updater.py` | Flash a QAPP over UART: `python quilla_host_updater.py <COM> app.bin -b 115200` |
 | `quilla_ed25519_sign.py` | Secure-boot signing / key management: `keygen`, `pubkey`, `sign`, `--self-test` |
 | `quilla_app_uart_flash.bat` | Windows one-shot flash helper |
 
 ### Key management (important)
 
-`tools/_keytest/` holds the repository's **default sample keypair**. Its private key (`private.hex`) is intentionally public and ships with the repo so a fresh clone works out of the box: the default `QBOOT_SEALED` / `QBOOT_SEC` builds compile in the matching default public key, and the upgrade flow (`quilla_host_upgrader.py --key tools/_keytest/private.hex`) needs the matching private key to sign — otherwise the device rejects the SIGN frame.
+`tools/_keytest/` holds the repository's **default sample keypair**. Its private key (`private.hex`) is intentionally public and ships with the repo so a fresh clone works out of the box: the default `QBOOT_SEALED` / `QBOOT_SEC` builds compile in the matching default public key, and the upgrade flow (`quilla_host_updater.py --key tools/_keytest/private.hex`) needs the matching private key to sign — otherwise the device rejects the SIGN frame.
 
 **For production, generate your own keypair offline.** The default key must NOT ship in a product — its private half is public, so anyone could sign an image the device accepts:
 

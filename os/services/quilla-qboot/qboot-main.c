@@ -10,14 +10,14 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the Institute nor the names of its contributors
+ * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INSTITUTE AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE INSTITUTE OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -76,7 +76,7 @@
 #include "shellport.h"
 
 /* ---- ring buffer bridging DMA ISR -> main-loop QIAP parser ---------------- */
-#define QBOOT_RX_RING_SZ  256U
+#define QBOOT_RX_RING_SZ  512U   /* >= one 270 B DATA frame, absorbed atomically */
 static uint8_t qboot_rx_ring[QBOOT_RX_RING_SZ];
 static volatile uint16_t qboot_rx_head;   /* written by ISR (sink) */
 static volatile uint16_t qboot_rx_tail;   /* written by main loop  */
@@ -177,14 +177,12 @@ qboot_qiap_run(void)
      * would never fill and every ENTER/DATA frame would time out.
      *
      * CRITICAL: harvest pushes every byte the DMA has written since the last
-     * call in one shot, but the parser consumes only ONE byte per loop pass.
-     * The loop runs far faster than bytes arrive (~10 bytes land per pass), so a
-     * pass that pops just one byte lets qboot_rx_ring grow by ~9 every pass;
-     * over the ~62 passes it takes to chew through one 62-byte DATA frame the
-     * ring overflows (qboot_rx_sink drops on full), a whole frame is silently
-     * lost, and the QIAP parser desyncs permanently -- thereafter every ACK
-     * echoes the PREVIOUS chunk's start (offset == one CHUNK). Draining the
-     * whole ring each pass keeps it bounded and lossless. */
+     * call in one shot; if the parser only popped one byte per pass the 512-byte
+     * ring would overflow mid-frame (qboot_rx_sink drops on full), a whole frame
+     * would be lost and the QIAP parser would desync permanently (every later
+     * ACK would echo the PREVIOUS chunk's start). Draining the whole ring each
+     * pass keeps it bounded and lossless. A one-page (270 B) DATA frame fits the
+     * 512-byte ring with room to spare. */
     shellport_rx_harvest();
 
     if(quilla_qiap_is_done()) {
@@ -257,7 +255,7 @@ static const shell_cmd_t qboot_swapp_cmd = {
 };
 
 /* ----------------------------------------------------------------------------
- * Shell command "pinfo": report the QBOOT partition layout. The host upgrader
+ * Shell command "pinfo": report the QBOOT partition layout. The host updater
  * queries this so it can size the APP region FROM THE SOC instead of hardcoding
  * a per-MCU value: APP_END equals SOC_FLASH_END, which differs per part (e.g.
  * PY32F040xB = 128 KiB, GD32F502VE = 512 KiB). The pre-upgrade size cap the
@@ -352,7 +350,7 @@ qboot_shell_run(void)
   qboot_shell_flow = kern_flow_register("qboot-shell", KERN_FLOW_MASK(1),
                                         (clock_time_t)0U);
   /* Boot stamp. Short visible version line "[BOOT] Quilla V<ver> [VARIANT]".
-   * The host upgrader (tools/quilla_host_upgrader.py) keys off the "[BOOT]" tag
+   * The host updater (tools/quilla_host_updater.py) keys off the "[BOOT]" tag
    * and the "part" command echo (which contains "qboot") to decide whether to
    * send "qiap" first, so the banner stays minimal with no extra "QBOOT shell"
    * line. QUILLA_QBOOT_VARIANT_STR is set per build (SEALED / SEC / CHECK);

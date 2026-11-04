@@ -82,7 +82,7 @@ QBOOT 分区预算为 **24 KB**（`0x08000000`–`0x08005FFF` = 24,576 B），�
    - **新边界必须仍是页对齐**：`quilla-qboot-hal.h` 里有编译期守卫（`QUILLA_QBOOT_APP_OFFSET % PAGE_SIZE == 0`），非页对齐会直接 `#error`；
    - 按 §7 的登记清单逐项核对：两个 `.ld`、两个 uvprojx、生成的 scatter、`eide.json` 3 处 `baseAddr`、
      以及 `Makefile.qboot`。`APP_END` 是 Flash 末址，取自 `arch/cpu/arm/<mcu>/soc.h` 的 `SOC_FLASH_END`，换平台改 soc.h 而非构建命令；
-   - 上位机（`tools/quilla_host_upgrader.py`）已不再写死 APP 末址：传输前它查询设备的 `pinfo` shell 命令取得 `APP_START`/`APP_END`，因此新边界会被自动跟随。
+   - 上位机（`tools/quilla_host_updater.py`）已不再写死 APP 末址：传输前它查询设备的 `pinfo` shell 命令取得 `APP_START`/`APP_END`，因此新边界会被自动跟随。
 
 ---
 

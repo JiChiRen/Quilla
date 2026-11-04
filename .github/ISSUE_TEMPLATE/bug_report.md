@@ -21,7 +21,7 @@ A clear and concise description of what you expected to happen.
 - Board / MCU (e.g. PY32F040xB, GD32F502VE):
 - Variant / image (QBOOT_CHECK / QBOOT_SEALED / QBOOT_SEC / QAPP):
 - Toolchain & version (GNU arm-none-eabi-gcc / Keil armclang):
-- Host OS and upgrader version:
+- Host OS and updater version:
 
 **Serial output / build log**
 ```

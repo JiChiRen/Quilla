@@ -51,7 +51,7 @@ verification (see the §2.1 self-check).
 
 ```bash
 # at the quilla repository root
-python tools/quilla_host_upgrader.py <COM> app.bin \
+python tools/quilla_host_updater.py <COM> app.bin \
     --key tools/_keytest/private.hex
 ```
 

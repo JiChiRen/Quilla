@@ -1,6 +1,6 @@
 # Quilla QBOOT 串口升级：速查
 
-完整版见 `doc/quilla-host-upgrader-guide.md`；参考实现 `tools/quilla_host_upgrader.py`。
+完整版见 `doc/quilla-host-updater-guide.md`；参考实现 `tools/quilla_host_updater.py`。
 
 ## 1. 前提
 
@@ -62,10 +62,10 @@ CRC-CCITT，poly 0x1021，反射型，初值 0，逐字节 `& 0xFFFF`（对齐 `
 
 ```bash
 python -m pip install pyserial
-python tools/quilla_host_upgrader.py COM3 app.bin          # Windows
-python tools/quilla_host_upgrader.py /dev/ttyUSB0 app.bin  # Linux
-python tools/quilla_host_upgrader.py COM3 app.bin -b 115200 -q
-python tools/quilla_host_upgrader.py --self-test           # 离线自检
+python tools/quilla_host_updater.py COM3 app.bin          # Windows
+python tools/quilla_host_updater.py /dev/ttyUSB0 app.bin  # Linux
+python tools/quilla_host_updater.py COM3 app.bin -b 115200 -q
+python tools/quilla_host_updater.py --self-test           # 离线自检
 ```
 
 - 固件用 raw `.bin`，大小 ≤ 目标 MCU 的 APP 区容量上限（`APP_END − APP_START`）。工具运行期向设备的 `pinfo` 命令索取该上限，随 MCU 自适应：PY32F040xB = 102400 B（`0x19000`），GD32F502VE = 495616 B（`0x79000`）。

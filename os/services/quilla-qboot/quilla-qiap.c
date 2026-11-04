@@ -10,14 +10,14 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the Institute nor the names of its contributors
+ * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE INSTITUTE AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE INSTITUTE OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -64,13 +64,14 @@ static int      done;
  * META store (quilla_qboot_meta_set_manifest), not a dedicated staging page. */
 
 /* ---- APP page-write coalescing -------------------------------------------
- * DATA frames carry 48-byte chunks (the host chunk is bounded by the RX DMA
- * design) but a Flash page is 256 bytes, so the naive read-modify-erase-write
- * per chunk costs ~5.3 erase/program cycles for every page -- an erase is what
- * actually costs tens of milliseconds, and that is where the ~20 s upgrade time
- * went. Instead the incoming bytes are merged into one staged page and the page
- * is committed exactly once, when the stream moves to another page or the
- * session is finalised. Same read-back verification, ~5x fewer erase cycles.
+ * DATA frames now carry one Flash page (PY32: 256 B; the host chunks by page),
+ * so a frame usually maps 1:1 onto a page and is committed once. The staged
+ * page is still needed for the frames that are NOT page-aligned: the final frame
+ * of an image, a partial-page frame, or an MCU whose page size differs from the
+ * host chunk. Bytes are merged into app_page and the page is committed exactly
+ * once -- on the move to a different page or at session finalisation -- so a
+ * partial-page frame never forces a read-modify-erase-write of a page that is
+ * still being filled. Same read-back verification, one erase per page.
  *
  * No dynamic allocation -- static, sized to exactly one page. */
 static uint8_t app_page[QUILLA_QBOOT_PAGE_SIZE] QUILLA_QBOOT_ALIGNED;

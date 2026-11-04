@@ -13,7 +13,7 @@
 
 | 环节 | 代码 |
 | --- | --- |
-| 上位机工具 | `tools/quilla_host_upgrader.py` |
+| 上位机工具 | `tools/quilla_host_updater.py` |
 | 上位机签名 | `tools/quilla_ed25519_sign.py` |
 | QBOOT 入口（main / 串口环 / shell） | `os/services/quilla-qboot/qboot-main.c`（共享） |
 | QIAP 帧状态机 + 写 Flash | `os/services/quilla-qboot/quilla-qiap.c` |
@@ -151,7 +151,7 @@ while(1) {
 }
 ```
 
-**Flash 擦写不在中断中执行。** DMA 中断只把字节推进 256 B 环形缓冲（`qboot_rx_sink`），主循环再逐个喂给 `quilla_qiap_feed()`。缓冲区满则丢弃，由上位机重传兜底。
+**Flash 擦写不在中断中执行。** DMA 中断只把字节推进 512 B 环形缓冲（`qboot_rx_sink`），主循环再逐个喂给 `quilla_qiap_feed()`。缓冲区满则丢弃，由上位机重传兜底。
 
 上位机侧 `ensure_upgrade_mode()` 先读 banner：
 
@@ -348,12 +348,12 @@ while(1) {}
 
 ```bash
 # 未启用安全启动（无公钥）的常规升级
-python tools/quilla_host_upgrader.py COM3 app.bin
+python tools/quilla_host_updater.py COM3 app.bin
 
 # 启用安全启动：用 keygen 生成的产线私钥发 SIGN 帧。
 # 须使用自己 keygen 产出的私钥：仓库默认（公开）钥匙的私钥随仓库一同公开，
 # 一旦流出等同公开，因此必须改用自有钥匙并离线保存。
-python tools/quilla_host_upgrader.py COM3 app.bin \
+python tools/quilla_host_updater.py COM3 app.bin \
        --key keys/prod/private.hex
 
 # 生成产线密钥对（输出 private.hex + public.hex，私钥离线保存）
@@ -367,7 +367,7 @@ python tools/quilla_ed25519_sign.py keygen --dir keys/prod
 若设备已烧公钥而上位机未指定 `--key`，工具会先提示「升级将在 SIGN 处被拒」，随后在 END 之后停止：
 设备停在 `flag=QIAP`，可重发正确签名的 SIGN 或直接重跑升级。
 
-完整参数见 `doc/quilla-host-upgrader-guide.md` §10.4；签名工具用法见 `tools/README.md`。
+完整参数见 `doc/quilla-host-updater-guide.md` §10.4；签名工具用法见 `tools/README.md`。
 
 ---
 

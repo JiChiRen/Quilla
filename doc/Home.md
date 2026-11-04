@@ -16,7 +16,7 @@ General Contiki-NG material (build system, networking, tutorials, other platform
 |---|---|
 | Dual-partition architecture, partitions & QIAP protocol | `qboot-app-architecture.md` |
 | Building a QAPP (Keil project) | `keil-qboot-app-build.md` |
-| Host upgrader integration | `quilla-host-upgrader-guide.md` (quick ref: `quilla-host-upgrader-brief.md`) |
+| Host updater integration | `quilla-host-updater-guide.md` (quick ref: `quilla-host-updater-brief.md`) |
 | Upgrade flow & state machine | `upgrade-flow.md` |
 | Secure boot & key management | `secure-boot.md` |
 | Boot flow | `boot-flow.md` |

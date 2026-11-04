@@ -62,7 +62,7 @@ The three QBOOT variants differ only in `C_DEFS` (`QUILLA_SB_BOOT_MODE` + `QUILL
 
 ## 6. Outputs and flashing
 
-Each target produces `.elf`, `.hex` and `.bin` under its build directory. Flash QBOOT to `0x08000000` and the APP to `0x08007000` (the host upgrader reads the exact APP range from the device at runtime via the `pinfo` shell command, so it needs no per-MCU hard-coding). Over UART the APP is upgraded with `tools/quilla_host_upgrader.py` — see `doc/quilla-host-upgrader-guide.md`.
+Each target produces `.elf`, `.hex` and `.bin` under its build directory. Flash QBOOT to `0x08000000` and the APP to `0x08007000` (the host updater reads the exact APP range from the device at runtime via the `pinfo` shell command, so it needs no per-MCU hard-coding). Over UART the APP is upgraded with `tools/quilla_host_updater.py` — see `doc/quilla-host-updater-guide.md`.
 
 > When flashing QBOOT and APP separately with a debugger, **erase by sector, never a full-chip erase** — a full-chip erase also wipes the META region (flag + manifest).
 

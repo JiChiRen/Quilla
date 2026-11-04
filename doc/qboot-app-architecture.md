@@ -56,7 +56,7 @@ PY32F040xB: Flash 128 KB = 0x20000 bytes, 256 B pages (512 pages). The layout is
 | **APP** | `0x08007000` – Flash end | **PY32F040xB `0x19000` (102,400 B ≈ 95.5 KB)**; GD32 `0x79000` (495,616 B) | business firmware; `ORIGIN = 0x08007000` |
 
 - **APP start address `APP_START = 0x08007000`** (`QUILLA_QBOOT_APP_START`; the protocols and jumps below all use this as the base).
-- **APP programmable upper bound is MCU-specific**: PY32F040xB = `0x19000` (APP ends at `0x0801FFFF`); GD32F502VE runs to `0x0807FFFF` (512 KiB flash → `0x79000`). META comes before APP and no longer occupies the Flash end page. The host upgrader does not hardcode the bound: it queries the device's `pinfo` command (§6) and derives the flashable cap from the running firmware's `SOC_FLASH_END`.
+- **APP programmable upper bound is MCU-specific**: PY32F040xB = `0x19000` (APP ends at `0x0801FFFF`); GD32F502VE runs to `0x0807FFFF` (512 KiB flash → `0x79000`). META comes before APP and no longer occupies the Flash end page. The host updater does not hardcode the bound: it queries the device's `pinfo` command (§6) and derives the flashable cap from the running firmware's `SOC_FLASH_END`.
 - **The META region sits between QBOOT and APP** (rather than at the end page): FLAG and manifest no longer occupy the Flash tail page, so the APP region extends to the end of Flash, maximizing space. The upgrade protocol hard-rejects any address that writes into the META region (§8), and QBOOT never touches the META/APP regions above itself.
 - **META = 4 KB is the unified minimal feasible value across MCUs**: GD32F502VE erases in 2 KiB pages (bank0), so META is sized 4 KiB (two 2 KiB pages) to give the flag record and manifest each their own erase page; it stays 4 KiB aligned for the PY32F040xB 4 KiB-sector boundary. The PY32F040xB page is only 256 B, so the 4 KB is pure alignment padding (FLAG ≈ 16 B + manifest ≈ 108 B actually occupy only a small fraction of META).
 - The table above lists current values. `APP_START` and the QBOOT length may be fine-tuned to actual sizes, but the three regions must not overlap, and **the META region must not be occupied by QBOOT or APP code/data** (do not allocate `0x08006000`–`0x08006FFF` to either side in the linker scripts).
@@ -155,7 +155,7 @@ The shell is common code and follows the established design of "the core does no
 
 This way: the logic for determining `qboot`/`app1` lives entirely in each system's own `main`, and the shell always stays neutral with zero hardcoding; adding a third partition in the future also only requires editing the corresponding entry point, without touching the shell.
 
-QBOOT additionally registers a `pinfo` command (`os/services/quilla-qboot/qboot-main.c`) that prints the real partition layout `[PART] APP_START=0x… APP_END=0x… APP_SIZE=0x…` from the compiled-in macros (`QUILLA_QBOOT_APP_END` = `SOC_FLASH_END`, which is MCU-specific). The host upgrader reads it, so its pre-flight flashable-size cap always matches the device instead of a hardcoded per-MCU value. `pinfo` is QBOOT-only (not in the APP shell) and, like `part`, is swallowed once the QIAP raw sink takes over.
+QBOOT additionally registers a `pinfo` command (`os/services/quilla-qboot/qboot-main.c`) that prints the real partition layout `[PART] APP_START=0x… APP_END=0x… APP_SIZE=0x…` from the compiled-in macros (`QUILLA_QBOOT_APP_END` = `SOC_FLASH_END`, which is MCU-specific). The host updater reads it, so its pre-flight flashable-size cap always matches the device instead of a hardcoded per-MCU value. `pinfo` is QBOOT-only (not in the APP shell) and, like `part`, is swallowed once the QIAP raw sink takes over.
 
 ---
 
@@ -357,7 +357,7 @@ Add this macro to the QBOOT build (Keil `Define` / `Makefile.qboot` `C_DEFS`) to
 The private key stays only on the production line; when flashing:
 
 ```bash
-python tools/quilla_host_upgrader.py COM3 app.bin --key keys/private.hex
+python tools/quilla_host_updater.py COM3 app.bin --key keys/private.hex
 ```
 
 ---

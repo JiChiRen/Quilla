@@ -81,7 +81,7 @@ The QBOOT partition budget is **24 KB** (`0x08000000`–`0x08005FFF` = 24,576 B)
    - **The new boundary must still be page-aligned**: `quilla-qboot-hal.h` has a compile-time guard (`QUILLA_QBOOT_APP_OFFSET % PAGE_SIZE == 0`); a non-page-aligned value will directly trigger `#error`;
    - Check item by item against the §7 registration checklist: the two `.ld` files, the two uvprojx files, the generated scatter, the 3 `baseAddr` entries in `eide.json`,
      and `Makefile.qboot`. `APP_END` is the Flash end address and comes from `SOC_FLASH_END` in `arch/cpu/arm/<mcu>/soc.h`; when changing platforms edit soc.h rather than the build command;
-   - The host tool (`tools/quilla_host_upgrader.py`) no longer hardcodes the APP end: it queries the device's `pinfo` shell command for `APP_START`/`APP_END` before transferring, so it follows the new boundary automatically.
+   - The host tool (`tools/quilla_host_updater.py`) no longer hardcodes the APP end: it queries the device's `pinfo` shell command for `APP_START`/`APP_END` before transferring, so it follows the new boundary automatically.
 
 ---
 

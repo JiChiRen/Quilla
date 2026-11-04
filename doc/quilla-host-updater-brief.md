@@ -1,6 +1,6 @@
 # Quilla QBOOT serial upgrade: quick reference
 
-Full version in `doc/quilla-host-upgrader-guide.md`; reference implementation in `tools/quilla_host_upgrader.py`.
+Full version in `doc/quilla-host-updater-guide.md`; reference implementation in `tools/quilla_host_updater.py`.
 
 ## 1. Prerequisite
 
@@ -62,10 +62,10 @@ Timeout / CRC retry limit is 3; anything else aborts immediately.
 
 ```bash
 python -m pip install pyserial
-python tools/quilla_host_upgrader.py COM3 app.bin          # Windows
-python tools/quilla_host_upgrader.py /dev/ttyUSB0 app.bin  # Linux
-python tools/quilla_host_upgrader.py COM3 app.bin -b 115200 -q
-python tools/quilla_host_upgrader.py --self-test           # offline self-test
+python tools/quilla_host_updater.py COM3 app.bin          # Windows
+python tools/quilla_host_updater.py /dev/ttyUSB0 app.bin  # Linux
+python tools/quilla_host_updater.py COM3 app.bin -b 115200 -q
+python tools/quilla_host_updater.py --self-test           # offline self-test
 ```
 
 - The firmware must be a raw `.bin`, no larger than the target MCU's APP-region capacity (`APP_END - APP_START`). At runtime the tool queries the device's `pinfo` command for that limit, so it adapts per MCU: PY32F040xB = 102400 B (`0x19000`), GD32F502VE = 495616 B (`0x79000`).

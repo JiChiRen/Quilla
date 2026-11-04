@@ -17,7 +17,7 @@ Quilla 由**机器人组件及光通信设计公司——深圳市积器仁信�
 |---|---|
 | 双区架构、分区与 QIAP 协议 | `qboot-app-architecture.md` |
 | 构建 QAPP（Keil 工程） | `keil-qboot-app-build.md` |
-| 串口升级上位机对接 | `quilla-host-upgrader-guide.md`（速查：`quilla-host-upgrader-brief.zh-CN.md`） |
+| 串口升级上位机对接 | `quilla-host-updater-guide.md`（速查：`quilla-host-updater-brief.zh-CN.md`） |
 | 升级流程与状态机 | `upgrade-flow.md` |
 | 安全启动与密钥管理 | `secure-boot.md` |
 | 启动流程 | `boot-flow.md` |

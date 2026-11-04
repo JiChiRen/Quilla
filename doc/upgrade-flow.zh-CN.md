@@ -144,7 +144,7 @@ quilla_qiap_init();                      /* 状态机复位：done=0, session=0 
 shell_puts("\r\n[QIAP] enter upgrade mode. Send ENTER frame.\r\n");
 while(1) {
   if(quilla_qiap_is_done()) {            /* 升级成功 -> 复位 */
-    shell_puts("\r\n[QIAP] success. Rebooting...\r\n");
+    shell_puts("\r\n[QIAP] flash complete. Rebooting into APP...\r\n");
     quilla_qboot_hal_reboot();
   }
   if(qboot_rx_pop(&b) == 0) quilla_qiap_feed(b);
@@ -330,7 +330,7 @@ send_ack(QUILLA_QIAP_ACK_SIGN, 0U);
 
 ## 12. 阶段 7：复位
 
-`quilla_qiap_is_done()` 返回 1 → 主循环打印 `[QIAP] success. Rebooting...` → `quilla_qboot_hal_reboot()`：
+`quilla_qiap_is_done()` 返回 1 → 主循环打印 `[QIAP] flash complete. Rebooting into APP...` → `quilla_qboot_hal_reboot()`：
 
 ```c
 __disable_irq();

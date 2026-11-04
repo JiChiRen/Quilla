@@ -143,7 +143,7 @@ quilla_qiap_init();                      /* state machine reset: done=0, session
 shell_puts("\r\n[QIAP] enter upgrade mode. Send ENTER frame.\r\n");
 while(1) {
   if(quilla_qiap_is_done()) {            /* upgrade success -> reboot */
-    shell_puts("\r\n[QIAP] success. Rebooting...\r\n");
+    shell_puts("\r\n[QIAP] flash complete. Rebooting into APP...\r\n");
     quilla_qboot_hal_reboot();
   }
   if(qboot_rx_pop(&b) == 0) quilla_qiap_feed(b);
@@ -334,7 +334,7 @@ unusable.
 
 ## 12. Stage 7: Reset
 
-`quilla_qiap_is_done()` returns 1 → the main loop prints `[QIAP] success. Rebooting...` → `quilla_qboot_hal_reboot()`:
+`quilla_qiap_is_done()` returns 1 → the main loop prints `[QIAP] flash complete. Rebooting into APP...` → `quilla_qboot_hal_reboot()`:
 
 ```c
 __disable_irq();

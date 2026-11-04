@@ -192,7 +192,7 @@ qboot_qiap_run(void)
 #if KERN_CONF_STACK_SHELL
       kern_stack_report("qiap-done");
 #endif
-      shell_puts("\r\n[QIAP] success. Rebooting...\r\n");
+      shell_puts("\r\n[QIAP] flash complete. Rebooting into APP...\r\n");
       quilla_qboot_hal_reboot();
     }
     while(qboot_rx_pop(&b) == 0) {

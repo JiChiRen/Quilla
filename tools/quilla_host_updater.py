@@ -621,37 +621,52 @@ class Updater:
                  "(QBOOT signaled completion with ACK 0x%02X)." % ACK_SIGN)
 
     def confirm_app_stamp(self, timeout=APP_STAMP_TIMEOUT):
-    """Best-effort post-check that the new APP booted and printed its version
-    stamp (`[QAPP] <name> V<ver>`) after the reboot.
+        """Best-effort post-check that the new APP booted and printed its version
+        stamp (`[QAPP] <name> V<ver>`) after the reboot.
 
-    This is NOT the success criterion: the upgrade is already complete when
-    QBOOT sends its completion ACK (ACK_SIGN 0x84 keyed, or ACK_END 0x83
-    no-key), which it only does after the image is committed, verified, the
-    manifest written and flag=APP1 set. Here we merely confirm end-to-end
-    that the image actually boots. It never raises -- a missing or slow stamp
-    (SEALED re-verifies the seal ~0.6 s; SECURE re-runs Ed25519 ~20 s; some
-    builds print no stamp) is a warning, not a failure.
+        This is NOT the success criterion: the upgrade is already complete when
+        QBOOT sends its completion ACK (ACK_SIGN 0x84 keyed, or ACK_END 0x83
+        no-key), which it only does after the image is committed, verified, the
+        manifest written and flag=APP1 set. Here we merely confirm end-to-end
+        that the image actually boots. It never raises -- a missing or slow stamp
+        (SEALED re-verifies the seal ~0.6 s; SECURE re-runs Ed25519 ~20 s; some
+        builds print no stamp) is a warning, not a failure. Serial data arrives
+        in chunks, so the stamp line is only accepted once complete (CR/LF, or
+        0.4 s of quiet), never a partial prefix.
 
-    Returns the stamp string on success, or None on timeout.
-    """
+        Returns the stamp string on success, or None on timeout.
+        """
         needle = b"[QAPP]"
         t0 = time.time()
         acc = b""
         last_tick = -1.0
+        last_rx = None
         while time.time() - t0 < timeout:
             if self.ser.in_waiting:
                 acc += self.ser.read(self.ser.in_waiting)
+                last_rx = time.time()
             i = acc.find(needle)
             if i >= 0:
                 rest = acc[i:]
+                # Serial data arrives in chunks: only accept the stamp once the
+                # line is complete (CR/LF seen after it), otherwise a partial
+                # line like "[QAPP] Pr" gets reported as the whole version.
+                eol = -1
                 for sep in (b"\r", b"\n"):
                     p = rest.find(sep)
-                    if p >= 0:
-                        rest = rest[:p]
-                        break
-                stamp = rest.decode("ascii", "replace")
-                self.log("[+] Confirmed: new APP is running, boot version stamp: %s" % stamp)
-                return stamp
+                    if p >= 0 and (eol < 0 or p < eol):
+                        eol = p
+                if eol >= 0:
+                    stamp = rest[:eol].decode("ascii", "replace")
+                    self.log("[+] Confirmed: new APP is running, boot version stamp: %s" % stamp)
+                    return stamp
+                acc = acc[i:]           # keep only the stamp line; bound growth
+                # Some builds print the stamp with no line ending: accept once
+                # the line has been quiet for 0.4 s.
+                if last_rx is not None and time.time() - last_rx >= 0.4:
+                    stamp = acc.decode("ascii", "replace").rstrip("\r\n")
+                    self.log("[+] Confirmed: new APP is running, boot version stamp: %s" % stamp)
+                    return stamp
             elapsed = time.time() - t0
             tick = int(elapsed // 5.0)
             if tick != last_tick:

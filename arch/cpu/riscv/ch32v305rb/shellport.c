@@ -65,12 +65,18 @@
  * channel would do; channel 6 is chosen to keep the pin/channel pairing
  * documented in one place. CH32V30x DMA has no DMAMUX: a channel is bound to
  * its peripheral by the peripheral's own DMA request, selected with
- * USART_DMACmd(USART2, USART_DMAReq_Rx, ...). */
+ * USART_DMACmd(SHELLPORT_USART, USART_DMAReq_Rx, ...). */
 #define SHELLPORT_DMA            DMA1
 #define SHELLPORT_DMA_CLK        RCC_AHBPeriph_DMA1
 #define SHELLPORT_DMA_RX_CH      DMA1_Channel6
 #define SHELLPORT_DMA_RX_IRQn    DMA1_Channel6_IRQn
 #define SHELLPORT_DMA_RX_TC_IT   DMA1_IT_TC6
+
+/* Vector entry points. The startup table already lists every USART/DMA
+ * vector; keeping the handler names here means a port change only touches
+ * this macro block. There is no build-time port switch. */
+#define SHELLPORT_USART_IRQ      USART2_IRQHandler
+#define SHELLPORT_DMA_IRQ        DMA1_Channel6_IRQHandler
 
 /* Console priority: below the rtimer (which owns the time base), above
  * SysTick. The two console vectors are kept at the same priority so they can
@@ -151,9 +157,9 @@ shellport_rx_harvest(void)
 }
 
 void
-USART2_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
+SHELLPORT_USART_IRQ(void) __attribute__((interrupt("WCH-Interrupt-fast")));
 void
-USART2_IRQHandler(void)
+SHELLPORT_USART_IRQ(void)
 {
   /* IDLE is the frame delimiter. Clear it (read DATAR per the RM) and wake the
    * shell process so shellport_rx_harvest() picks up the bytes. We do NOT
@@ -165,9 +171,9 @@ USART2_IRQHandler(void)
 }
 
 void
-DMA1_Channel6_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
+SHELLPORT_DMA_IRQ(void) __attribute__((interrupt("WCH-Interrupt-fast")));
 void
-DMA1_Channel6_IRQHandler(void)
+SHELLPORT_DMA_IRQ(void)
 {
   /* Transfer-complete = the ring just wrapped. Only DMA_IT_TC is enabled on
    * this channel, so reaching here means a full lap: wake the harvest as a

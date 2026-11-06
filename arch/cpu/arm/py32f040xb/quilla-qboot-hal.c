@@ -195,10 +195,11 @@ quilla_qboot_hal_jump_to_app(uint32_t app_start)
 #ifdef QBOOT_BUILD
   /* Hand-over hygiene.
    *
-   * (1) The QIAP owns USART2 + DMA1_Channel6 and its RX buffers live in the
-   *     same low RAM the APP is about to claim for its own .data/.bss. A
-   *     channel left running would keep writing into what is now APP state,
-   *     so park both the DMA request and the channel and mask their IRQs.
+   * (1) The QIAP owns the console USART + its RX DMA channel, and its RX
+   *     buffers live in the same low RAM the APP is about to claim for its
+   *     own .data/.bss. A channel left running would keep writing into what
+   *     is now APP state, so park both the DMA request and the channel and
+   *     mask their IRQs. Reference wiring USART2 / DMA1_Channel6.
    * (2) Pending IRQ state must not survive the branch: the APP re-installs
    *     its own handlers after start-up, and a stale pending flag would fire
    *     into a half-initialised image. */

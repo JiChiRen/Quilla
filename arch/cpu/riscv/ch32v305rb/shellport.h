@@ -33,10 +33,13 @@
  * \addtogroup shell
  * @{
  *
- * \defgroup shellport Quilla shell hardware port (CH32V305VB USART2 PA2/PA3)
+ * \defgroup shellport Quilla shell hardware port (CH32V305VB USART + DMA)
  *
- * Binds the hardware-independent Quilla shell to USART2 on PA2 (TX) / PA3
- * (RX), 115200 8-N-1. Functional design is aligned to the GD32F502VE port:
+ * Binds the hardware-independent Quilla shell to a CH32V30x USART. Default
+ * wiring is USART2 / PA2 TX / PA3 RX / DMA1 channel 6, 115200 8-N-1. All
+ * hardware assignments live in the macro block at the top of shellport.c;
+ * there is no build-time port switch. Functional design is aligned to the
+ * GD32F502VE port:
  * CIRCULAR-mode DMA1 channel 6 fills a single 512-byte ring forever (never
  * re-arms); the USART IDLE-line interrupt (frame delimiter) and the DMA
  * transfer-complete interrupt only poll the shell process, and the real RX

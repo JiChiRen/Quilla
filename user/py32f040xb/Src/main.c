@@ -444,7 +444,7 @@ extern void shellport_emergency_write(const char *s);
 
 /* Direct, HAL-independent dying gasp. The stock shellport_emergency_write()
  * routes through HAL_UART_Transmit(), which returns HAL_BUSY and emits NO
- * bytes if huart2.gState == BUSY_TX -- and that is exactly why the "ERR: "
+ * bytes if shell_uart.gState == BUSY_TX -- and that is exactly why the "ERR: "
  * line was silently dropped on the spontaneous reset. Here we bit-bang the
  * string straight into USART2 (poll TXE, stuff DR) and then wait for TC so
  * every byte is physically shifted out BEFORE the reset pulls the rug. A short

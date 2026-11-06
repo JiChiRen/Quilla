@@ -60,7 +60,7 @@
 
 /* Address of USART_DATA (offset 0x04 in every USARTx block), i.e. the source
  * the DMA reads. The vendor library only exposes it as a dereference macro. */
-#define SHELLPORT_USART_DATA_ADDR ((uint32_t)(USART0 + 0x04U))
+#define SHELLPORT_USART_DATA_ADDR ((uint32_t)(SHELLPORT_USART + 0x04U))
 
 /* DMA RX: DMA0 channel 4, routed through DMAMUX request 20
  * (DMA_REQUEST_USART0_RX). GD32F5 has no fixed channel-peripheral map: each
@@ -74,6 +74,12 @@
 #define SHELLPORT_DMA_RX_REQ     DMA_REQUEST_USART0_RX
 #define SHELLPORT_DMA_RX_MUXCH   DMAMUX_MUXCH4
 #define SHELLPORT_DMA_RX_IRQn    DMA0_Channel4_IRQn
+
+/* Vector entry points. The startup table already lists every USART/DMA
+ * vector; keeping the handler names here means a port change only touches
+ * this macro block. There is no build-time port switch. */
+#define SHELLPORT_USART_IRQ      USART0_IRQHandler
+#define SHELLPORT_DMA_IRQ        DMA0_Channel4_IRQHandler
 
 /* Console priority: below the rtimer (which owns the time base), above
  * SysTick. The two console vectors are kept at the same priority so that, if
@@ -177,7 +183,7 @@ shellport_rx_harvest(void)
 }
 
 void
-USART0_IRQHandler(void)
+SHELLPORT_USART_IRQ(void)
 {
   /* IDLE is the frame delimiter. Clear it (read STAT0, then read DATA per the
    * RM) and wake the shell process so shellport_rx_harvest() picks up the
@@ -190,7 +196,7 @@ USART0_IRQHandler(void)
 }
 
 void
-DMA0_Channel4_IRQHandler(void)
+SHELLPORT_DMA_IRQ(void)
 {
   /* HTF (half full) and FTF (full / wrap) both mean "a slice of the ring is
    * now safe to read"; the harvest reads up to the live DMA head regardless.

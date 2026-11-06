@@ -33,10 +33,11 @@
  * \addtogroup shell
  * @{
  *
- * \defgroup shellport Quilla shell hardware port (PY32F040xB USART2 + DMA)
+ * \defgroup shellport Quilla shell hardware port (PY32F040xB USART + DMA)
  *
- * Binds the hardware-independent Quilla shell to the PY32F040xB USART2 on
- * PA2/PA3. Reception uses a single CIRCULAR-mode DMA feeding a 1024-byte ring
+ * Binds the hardware-independent Quilla shell to a PY32F040xB USART.
+ * Default wiring is USART2 / PA2 TX / PA3 RX / DMA1_Channel6 (reference board);
+ * Reception uses a single CIRCULAR-mode DMA feeding a 1024-byte ring
  * that runs forever (never re-armed). New bytes are harvested in the shell
  * thread and copied into the shell ring / OTA sink; the ISRs only poll the
  * shell process. This file is the ONLY place that touches UART/DMA/GPIO.
@@ -54,7 +55,7 @@
 #define SHELLPORT_BAUDRATE 115200U
 #endif
 
-/* Initialize the USART2 + DMA port and start the shell process.
+/* Initialize the console USART + DMA port and start the shell process.
  * Returns 0 on success, negative on failure. */
 int shellport_init(void);
 

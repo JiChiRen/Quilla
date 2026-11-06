@@ -33,11 +33,12 @@
  * \addtogroup shell
  * @{
  *
- * \defgroup shellport Quilla shell hardware port (GD32F502VE USART0 PB6/PB7)
+ * \defgroup shellport Quilla shell hardware port (GD32F502VE USART + DMA)
  *
- * Binds the hardware-independent Quilla shell to USART0 on PB6 (TX) / PB7 (RX),
- * alternate function 0, 115200 8-N-1. This is the pinout of the reference
- * board's "TRANS_COM0" port, so the same wiring can be reused verbatim.
+ * Binds the hardware-independent Quilla shell to a GD32F502VE USART. Default
+ * wiring is USART0 / PB6 TX / PB7 RX / AF0 / DMA0 channel 4 (the reference
+ * board's "TRANS_COM0" port), 115200 8-N-1. All hardware assignments live in
+ * the macro block at the top of shellport.c; there is no build-time port switch.
  *
  * Reception is DMA driven: DMA0 channel 4 (routed through DMAMUX request
  * DMA_REQUEST_USART0_RX) runs in CIRCULAR mode filling a single 512-byte ring
@@ -70,7 +71,7 @@
 #define SHELLPORT_BAUDRATE 115200U
 #endif
 
-/* Initialize the USART0 port and start the shell process.
+/* Initialize the console USART + DMA port and start the shell process.
  * Returns 0 on success, negative on failure. */
 int shellport_init(void);
 

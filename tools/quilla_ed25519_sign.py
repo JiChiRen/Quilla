@@ -19,7 +19,7 @@ Usage:
 keygen writes:
     DIR/private.hex   32-byte seed, hex          (KEEP SECRET)
     DIR/public.hex    32-byte public key, hex     (bake into the QBOOT)
-and prints the exact -DQUILLA_SECURE_BOOT_PUBKEY=... macro for the build.
+and prints toolchain-specific instructions for baking the key into QBOOT.
 """
 
 import argparse
@@ -225,6 +225,24 @@ def self_test():
     return 0 if ok else 1
 
 
+def print_provisioning(pk):
+    """Print toolchain-specific instructions for baking PK into QBOOT."""
+    key_list = "{%s}" % ",".join("0x%02x" % b for b in pk)
+    print("Bake the public key into the QBOOT build:")
+    print()
+    print("  GNU / EIDE (add to C_DEFS):")
+    print("    -DQUILLA_SECURE_BOOT_PUBKEY=%s" % key_list)
+    print()
+    print("  Keil uVision (Define is comma-separated; do NOT paste the {...}")
+    print("  list there):")
+    print("    1. add a product branch to")
+    print("       os/services/quilla-qboot/quilla-qboot-pubkey.h")
+    print("       using the key bytes above")
+    print("       (template: tools/_keytest/README.md section 3.2)")
+    print("    2. add its token (e.g. QUILLA_QBOOT_PRODUCT_MYPART) to the")
+    print("       QBOOT Define box and REMOVE QUILLA_QBOOT_DEFAULT_KEY")
+
+
 # ---- CLI -------------------------------------------------------------------
 def cmd_keygen(args):
     d = args.dir
@@ -242,9 +260,8 @@ def cmd_keygen(args):
     print("wrote %s   (KEEP SECRET - 32-byte seed)" % sk_path)
     print("wrote %s" % pk_path)
     print()
-    print("Bake the public key into the QBOOT build:")
-    print("  -DQUILLA_SECURE_BOOT_PUBKEY={%s}"
-          % ",".join("0x%02x" % b for b in pk))
+    print()
+    print_provisioning(pk)
     return 0
 
 
@@ -254,8 +271,7 @@ def cmd_pubkey(args):
     pk = pubkey_from_seed(seed)
     print(pk.hex())
     print()
-    print("  -DQUILLA_SECURE_BOOT_PUBKEY={%s}"
-          % ",".join("0x%02x" % b for b in pk))
+    print_provisioning(pk)
     return 0
 
 

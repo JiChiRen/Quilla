@@ -3,7 +3,7 @@
 > This directory holds the repository's **default sample keypair**. For the
 > authoritative guidance see [`tools/README.md`](../README.md) and
 > [`doc/secure-boot.md`](../../doc/secure-boot.md) §2.5. TL;DR — `private.hex` is
-> intentionally public so a fresh clone works out of the box (dev + SEALED/SEC
+> intentionally public so a fresh clone works out of the box (dev + SEALED/SECURED
 > upgrade); **do not use the default key in production firmware** — generate your
 > own keypair.
 
@@ -93,12 +93,9 @@ complete "regenerate public and private key" flow):
 python tools/quilla_ed25519_sign.py keygen --dir <offline-secure-dir>
 ```
 
-This outputs `private.hex` (secret) + `public.hex`, and prints a ready-to-paste
-macro:
-
-```
--DQUILLA_SECURE_BOOT_PUBKEY={0x..,0x..,...}
-```
+This outputs `private.hex` (secret) + `public.hex`, and prints the public key
+bytes plus toolchain-specific provisioning instructions (the GNU `C_DEFS`
+macro, and the Keil product-branch procedure in §3.2).
 
 ### 3.2 Get the public key compiled into QBOOT (replace the default key)
 
@@ -107,7 +104,7 @@ the device uses it to verify at boot / install; the private key never enters
 firmware. Wiring:
 
 1. Add a product branch in `os/services/quilla-qboot/quilla-qboot-pubkey.h` with
-   the `-DQUILLA_SECURE_BOOT_PUBKEY={...}` bytes printed in §3.1:
+   the public key bytes printed in §3.1:
 
    ```c
    #if defined(QUILLA_QBOOT_PRODUCT_MYPART) && !defined(QUILLA_SECURE_BOOT_PUBKEY)
@@ -124,7 +121,7 @@ firmware. Wiring:
      indirection).
 
 3. A release build may add `-DQUILLA_PRODUCTION_BUILD`: if the repository default
-   (public) public key is still compiled in, the header emits a compile warning
+   public key is still compiled in, `quilla-qboot-secure.c` emits one compile warning
    reminding you to replace it (no longer a hard `#error`) — but shipping the
    default key is equivalent to handing over the private key, letting anyone sign
    for your device, so it must still be actively replaced.

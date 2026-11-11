@@ -338,7 +338,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>GD32F50X,GD32F502,QAPP_BUILD,QUILLA_QBOOT_APP_START=0x08007000U,QUILLA_QBOOT_FLAG_ADDR=0x08006000U,QUILLA_QBOOT_PAGE_SIZE=2048U,QUILLA_QBOOT_RAM_START=0x20000000U,QUILLA_QBOOT_RAM_SIZE=0x00010000U</Define>
+              <Define>GD32F50X,GD32F502,QAPP_BUILD,QUILLA_QBOOT_APP_START=0x08007000U,QUILLA_QBOOT_PAGE_SIZE=2048U,QUILLA_QBOOT_RAM_START=0x20000000U,QUILLA_QBOOT_RAM_SIZE=0x00010000U</Define>
               <Undefine></Undefine>
               <IncludePath>..;..\Inc;..\..\..\os;..\..\..\os\sys;..\..\..\os\lib;..\..\..\os\services\shell;..\..\..\os\services\quilla-qboot;..\..\..\arch\cpu\arm;..\..\..\arch\cpu\arm\gd32f502ve;..\..\..\arch\platform\arm;..\..\..\arch\platform\arm\gd32f502ve;..\..\..\arch\cpu\arm\CMSIS\Core\Include;..\..\..\arch\cpu\arm\CMSIS\Device\GigaDevice\GD32F50x\Include;..\..\..\arch\cpu\arm\vendor\GigaDevice\GD32F50x_Firmware_Library\GD32F50x_standard_peripheral\Include</IncludePath>
             </VariousControls>

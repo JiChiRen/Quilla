@@ -29,7 +29,7 @@ Devices currently integrated:
 | Vendor | Device | Core | Status |
 |---|---|---|---|
 | Puya | PY32F040xB | Cortex-M0+ | In build (APP / QBOOT) |
-| GigaDevice | GD32F50x | Cortex-M33 | In build (APP / QBOOT; EIDE + Keil); QBOOT_CHECK / QBOOT_SEC verified on hardware |
+| GigaDevice | GD32F50x | Cortex-M33 | In build (APP / QBOOT; EIDE + Keil); QBOOT_CHECK / QBOOT_SECURED verified on hardware |
 
 ## Notes on adding / moving device files
 

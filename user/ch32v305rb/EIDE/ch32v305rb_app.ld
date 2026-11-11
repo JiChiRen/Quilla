@@ -25,7 +25,7 @@ __stack_size = 0x2000;   /* 8 KiB main stack */
 MEMORY
 {
   RAM   (xrw) : ORIGIN = 0x20000000, LENGTH = 32K
-  FLASH (rx)  : ORIGIN = 0x00007000, LENGTH = 0x19000
+  FLASH (rx)  : ORIGIN = 0x00007000, LENGTH = 0x18000
 }
 
 SECTIONS

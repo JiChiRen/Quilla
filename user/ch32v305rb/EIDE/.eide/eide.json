@@ -237,5 +237,5 @@
       "buildDir": "QBOOT_CHECK"
     }
   },
-  "note": "Authoritative build is the GNU Makefiles in this directory (make -f Makefile / Makefile.qboot[.sealed|.sec]); the toolchain bin dir is supplied via GCC_PATH or PATH and is intentionally not recorded here. See the compile chapter of doc/."
+  "note": "Authoritative build is the GNU Makefiles in this directory (make -f Makefile / Makefile.qboot[.sealed|.secured]); the toolchain bin dir is supplied via GCC_PATH or PATH and is intentionally not recorded here. See the compile chapter of doc/."
 }

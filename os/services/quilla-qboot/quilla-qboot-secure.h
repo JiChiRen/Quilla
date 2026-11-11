@@ -64,14 +64,155 @@
 #ifndef QUILLA_SECURE_BOOT_H_
 #define QUILLA_SECURE_BOOT_H_
 
+/* ---- QBOOT product configuration -----------------------------------------
+ *
+ * QUILLA_QBOOT_HW_COUNTER_LEVEL selects the hardware monotonic-counter
+ * carrier. It is a PRODUCT decision and is defined here, in the QBOOT policy
+ * header. Do NOT pass it with -D from Keil .uvprojx, EIDE or the Makefiles:
+ * the build projects carry no QBOOT policy. soc.h declares physical
+ * capability only.
+ *
+ * This block sits BEFORE the quilla-qboot-hal.h include so that hal.h can
+ * resolve the level when it derives the internal carrier macros. Include
+ * guards make both entry paths (include hal.h first, or secure.h first)
+ * converge on exactly one definition.
+ * ------------------------------------------------------------------------- */
+#include "soc.h"
+
+#define QUILLA_QBOOT_HW_COUNTER_NONE  0
+#define QUILLA_QBOOT_HW_COUNTER_WPP   1
+#define QUILLA_QBOOT_HW_COUNTER_OTP   2
+
+/* On-target validation switch for true-OTP parts (GD32F502VE).
+ * Set to 1 to select LEVEL=OTP while validating the true-OTP counter path.
+ * True-OTP cells are irreversible; set back to 0 for production, where
+ * true-OTP parts fall back to NONE. PY32/CH32 always derive WPP. */
+#define QUILLA_QBOOT_CONF_VALIDATE_TRUE_OTP  1
+
+#ifndef QUILLA_QBOOT_HW_COUNTER_LEVEL
+#if defined(SOC_OTP_AVAILABLE) && (SOC_OTP_AVAILABLE != 0) && \
+    (QUILLA_QBOOT_CONF_VALIDATE_TRUE_OTP != 0)
+#define QUILLA_QBOOT_HW_COUNTER_LEVEL  QUILLA_QBOOT_HW_COUNTER_OTP
+#elif defined(SOC_WPP_AVAILABLE) && (SOC_WPP_AVAILABLE != 0)
+#define QUILLA_QBOOT_HW_COUNTER_LEVEL  QUILLA_QBOOT_HW_COUNTER_WPP
+#else
+#define QUILLA_QBOOT_HW_COUNTER_LEVEL  QUILLA_QBOOT_HW_COUNTER_NONE
+#endif
+#endif
+
+/* ---- hardware carrier resolution -----------------------------------------
+ *
+ * Resolves QUILLA_QBOOT_HW_COUNTER_LEVEL (policy above) against the physical
+ * capability declared by the port's soc.h, and derives the internal carrier
+ * macros consumed by quilla-qboot-otp.c / quilla-qboot-secure.c / the APP_END
+ * partition logic in quilla-qboot-hal.h. The two hardware carriers are
+ * documented in doc/anti-rollback-counter.md section 2.4.
+ * ------------------------------------------------------------------------- */
+
+/* ---- hardware monotonic counter feature level ----------------------------
+ *
+ * QUILLA_QBOOT_HW_COUNTER_LEVEL and its three level constants are defined
+ * above in this file. Do not define them in the build projects or in soc.h:
+ * soc.h declares physical capability only.
+ *
+ * This section resolves the configured level against that capability and
+ * derives the internal carrier macros consumed by quilla-qboot-otp.c /
+ * quilla-qboot-secure.c. The two hardware carriers are documented in
+ * doc/anti-rollback-counter.md section 2.4.
+ * ------------------------------------------------------------------------ */
+
+/* Physical carrier availability, declared by the port in soc.h. */
+#ifdef SOC_OTP_AVAILABLE
+#define QUILLA_QBOOT_OTP_AVAIL   SOC_OTP_AVAILABLE
+#else
+#define QUILLA_QBOOT_OTP_AVAIL   0
+#endif
+
+#ifdef SOC_WPP_AVAILABLE
+#define QUILLA_QBOOT_WPP_AVAIL  SOC_WPP_AVAILABLE
+#else
+#define QUILLA_QBOOT_WPP_AVAIL  0
+#endif
+
+/* 1 when any counter carrier exists (true OTP or WRP-protected flash). Retained
+ * so the per-MCU HAL (e.g. gd32f502ve/quilla-qboot-hal.c) can still gate its
+ * real OTP programming routines on physical capability. */
+#define QUILLA_QBOOT_SECPROG_AVAILABLE \
+  (QUILLA_QBOOT_OTP_AVAIL || QUILLA_QBOOT_WPP_AVAIL)
+
+/* Resolve the configured level against the declared hardware. The selected
+ * carrier macros are what quilla-qboot-otp.c / -secure.c key on: a requested
+ * carrier that the hardware does not provide resolves to neither (the build
+ * warns about the mismatch in quilla-qboot-otp.c). */
+#if QUILLA_QBOOT_HW_COUNTER_LEVEL == QUILLA_QBOOT_HW_COUNTER_OTP
+#if QUILLA_QBOOT_OTP_AVAIL
+#define QUILLA_QBOOT_OTP_HW   1   /* selected: true OTP */
+#define QUILLA_QBOOT_WPP    0
+#else
+#define QUILLA_QBOOT_OTP_HW   0
+#define QUILLA_QBOOT_WPP    0   /* OTP requested but unavailable */
+#endif
+#elif QUILLA_QBOOT_HW_COUNTER_LEVEL == QUILLA_QBOOT_HW_COUNTER_WPP
+#if QUILLA_QBOOT_WPP_AVAIL
+#define QUILLA_QBOOT_OTP_HW   0
+#define QUILLA_QBOOT_WPP    1   /* selected: write-protected programmable (WPP) */
+#else
+#define QUILLA_QBOOT_OTP_HW   0
+#define QUILLA_QBOOT_WPP    0   /* WPP requested but unavailable */
+#endif
+#else /* QUILLA_QBOOT_HW_COUNTER_NONE */
+#define QUILLA_QBOOT_OTP_HW   0
+#define QUILLA_QBOOT_WPP    0
+#endif
+
+/* Internal enable switch: compiled-in AND a carrier is actually selected.
+ * Derived from QUILLA_QBOOT_HW_COUNTER_LEVEL and the declared hardware; never
+ * set directly by a port. */
+#if (QUILLA_QBOOT_OTP_HW + QUILLA_QBOOT_WPP)
+#define QUILLA_QBOOT_OTP_COUNTER   1
+#else
+#define QUILLA_QBOOT_OTP_COUNTER   0
+#endif
+
+/* Base/size come from whichever carrier is actually selected. */
+#if QUILLA_QBOOT_OTP_HW
+#ifndef SOC_OTP_BASE
+#error "QUILLA_QBOOT_HW_COUNTER_LEVEL=OTP requires SOC_OTP_BASE in arch/cpu/<arch>/<mcu>/soc.h"
+#endif
+#ifndef SOC_OTP_SIZE
+#error "QUILLA_QBOOT_HW_COUNTER_LEVEL=OTP requires SOC_OTP_SIZE in arch/cpu/<arch>/<mcu>/soc.h"
+#endif
+#define QUILLA_QBOOT_OTP_BASE          SOC_OTP_BASE
+#define QUILLA_QBOOT_OTP_SIZE          SOC_OTP_SIZE
+#elif QUILLA_QBOOT_WPP
+#ifndef SOC_OTP_WRPROT_BASE
+#error "QUILLA_QBOOT_HW_COUNTER_LEVEL=WPP requires SOC_OTP_WRPROT_BASE in arch/cpu/<arch>/<mcu>/soc.h"
+#endif
+#ifndef SOC_OTP_WRPROT_SIZE
+#error "QUILLA_QBOOT_HW_COUNTER_LEVEL=WPP requires SOC_OTP_WRPROT_SIZE in arch/cpu/<arch>/<mcu>/soc.h"
+#endif
+#define QUILLA_QBOOT_OTP_BASE          SOC_OTP_WRPROT_BASE
+#define QUILLA_QBOOT_OTP_SIZE          SOC_OTP_WRPROT_SIZE
+#endif /* selected carrier */
+
+/* Counter cell granularity (bytes per program unit). Defaults to 1 (byte
+ * granular, the GD32 OTP case) when the port does not declare it. */
+#ifdef SOC_OTP_CELL_SIZE
+#define QUILLA_QBOOT_OTP_CELL_SIZE     SOC_OTP_CELL_SIZE
+#else
+#define QUILLA_QBOOT_OTP_CELL_SIZE     1
+#endif
+
+
 #include <stdint.h>
 
 #include "quilla-qboot-hal.h"
 
 #include "quilla-version.h"   /* QUILLA_APP_SECURITY_VERSION / QUILLA_APP_SECVER_OFF */
 
-/* Per-product provisioned key. Included before the all-0xFF default so a
- * build that selects a QUILLA_QBOOT_PRODUCT_* macro bakes a real key. */
+/* Provisioned key. Included before the all-0xFF default so the repository
+ * default branch (or a product branch you add there) bakes a real key; with
+ * neither, the erased-key default below leaves the gate inactive. */
 #include "quilla-qboot-pubkey.h"
 
 /* ---- sizes --------------------------------------------------------------- */
@@ -163,6 +304,19 @@
 
 #ifndef QUILLA_SB_BOOT_MODE
 #define QUILLA_SB_BOOT_MODE  QUILLA_SB_BOOT_MODE_SEALED
+#endif
+
+/* Boot banner variant tag. Derived from the mode so build projects specify
+ * QUILLA_SB_BOOT_MODE once and never carry a duplicate string define. An
+ * unsupported mode fails the build instead of printing a misleading tag. */
+#if QUILLA_SB_BOOT_MODE == QUILLA_SB_BOOT_MODE_CHECK
+#define QUILLA_QBOOT_VARIANT_STR  "CHECK"
+#elif QUILLA_SB_BOOT_MODE == QUILLA_SB_BOOT_MODE_SEALED
+#define QUILLA_QBOOT_VARIANT_STR  "SEALED"
+#elif QUILLA_SB_BOOT_MODE == QUILLA_SB_BOOT_MODE_SECURE
+#define QUILLA_QBOOT_VARIANT_STR  "SECURED"
+#else
+#error "QUILLA_SB_BOOT_MODE must be CHECK, SEALED or SECURE"
 #endif
 
 /* ---- anti-rollback floor -------------------------------------------------

@@ -351,6 +351,86 @@ gd32_flash_erase_end(void)
 }
 
 /* ----------------------------------------------------------------------------
+ * OTP byte program (hardware monotonic counter primitive).
+ *
+ * GD32F50x FMC chapter: OTP cells accept exactly ONE program operation and
+ * can never be erased, so the routine refuses any cell that does not read
+ * 0xFF beforehand and verifies the written value by read-back. The program
+ * sequence is the vendor fmc_otp_byte_program() flow (set PG, store the byte,
+ * wait BUSY, clear PG) with the same unlock / NWLDE / busy-guard discipline
+ * as the main-flash routines above, and it runs from the SRAM box like them.
+ * No erase phase exists -- that is the entire point of OTP.
+ * -------------------------------------------------------------------------- */
+__attribute__((section(".text.gd32_flash_ram"), used, noinline))
+static int
+gd32_otp_prog_ram(uint32_t addr, const uint8_t *src, uint32_t len)
+{
+  uint32_t i;
+  uint32_t to;
+
+  FMC_STAT0 |= (uint32_t)(FMC_STAT0_PGERR | FMC_STAT0_WPERR | FMC_STAT0_ENDF);
+
+  if((FMC_CTL0 & FMC_CTL0_LK) != 0U) {
+    FMC_KEY0 = GD32_FMC_UNLOCK0;
+    FMC_KEY0 = GD32_FMC_UNLOCK1;
+  }
+  FMC_CTL0 &= ~FMC_CTL0_NWLDE;
+
+  to = 0x04000000U;
+  while(((FMC_STAT0 & FMC_STAT0_BUSY) != 0U) && (to != 0U)) { to--; }
+  if((FMC_STAT0 & FMC_STAT0_BUSY) != 0U) {
+    FMC_CTL0 |= FMC_CTL0_LK;
+    return 4;
+  }
+
+  for(i = 0U; i < len; i++) {
+    uint8_t cur = REG8(addr + i);
+
+    if(cur != 0xFFU) {
+      /* One program per cell: a cell that is no longer 0xFF has already been
+       * used (by us or by anyone) and must never be programmed again. */
+      FMC_CTL0 |= FMC_CTL0_LK;
+      return 9;
+    }
+
+    to = 0x00040000U;
+    while(((FMC_STAT0 & FMC_STAT0_BUSY) != 0U) && (to != 0U)) { to--; }
+    FMC_CTL0 |= FMC_CTL0_PG;
+    REG8(addr + i) = src[i];
+    to = 0x00040000U;
+    while(((FMC_STAT0 & FMC_STAT0_BUSY) != 0U) && (to != 0U)) { to--; }
+    FMC_CTL0 &= ~FMC_CTL0_PG;
+    if((FMC_STAT0 & (FMC_STAT0_PGERR | FMC_STAT0_WPERR)) != 0U) {
+      FMC_CTL0 |= FMC_CTL0_LK;
+      return ((FMC_STAT0 & FMC_STAT0_PGERR) != 0U) ? 6 : 7;
+    }
+    if((FMC_STAT0 & FMC_STAT0_BUSY) != 0U) {
+      FMC_CTL0 |= FMC_CTL0_LK;
+      return 8;
+    }
+    FMC_STAT0 |= FMC_STAT0_ENDF;
+
+    /* Read-back verify (the OTP cell is the only copy, so trust nothing). */
+    if(REG8(addr + i) != src[i]) {
+      FMC_CTL0 |= FMC_CTL0_LK;
+      return 9;
+    }
+  }
+
+  FMC_CTL0 |= FMC_CTL0_LK;
+  return 0;
+}
+
+/* End marker for gd32_otp_prog_ram; growth guard only, see
+ * GD32_FLASH_RAM_BOX below. */
+__attribute__((section(".text.gd32_flash_ram"), used))
+static void
+gd32_otp_prog_end(void)
+{
+  __NOP();
+}
+
+/* ----------------------------------------------------------------------------
  * Fixed-size copy box for the RAM-resident flash routines.
  *
  * WHY NOT "end - start": all routines and end markers share ONE section
@@ -474,6 +554,60 @@ quilla_qboot_hal_flash_erase_range(uint32_t base, uint32_t size)
     }
   }
   return 0;
+}
+
+int
+quilla_qboot_hal_otp_program_byte(uint32_t addr, uint8_t value)
+{
+#if QUILLA_QBOOT_SECPROG_AVAILABLE
+  int rc;
+
+  if((addr < QUILLA_QBOOT_OTP_BASE) ||
+     (addr >= (QUILLA_QBOOT_OTP_BASE + QUILLA_QBOOT_OTP_SIZE))) {
+    return -1;
+  }
+  rc = gd32_run_ram(((uintptr_t)gd32_otp_prog_ram) & ~(uintptr_t)1U,
+                    ((uintptr_t)gd32_otp_prog_end) & ~(uintptr_t)1U,
+                    addr, &value, 1U);
+  /* 9 = cell-not-blank or read-back mismatch; surface as the HAL contract's
+   * generic program failure so callers cannot confuse it with an erase code. */
+  return (rc == 0) ? 0 : -3;
+#else
+  /* The F502VE always has OTP (SOC_OTP_AVAILABLE=1 in soc.h); this branch
+   * exists so the file still compiles if that macro is ever cleared. */
+  (void)addr;
+  (void)value;
+  return -1;
+#endif
+}
+
+int
+quilla_qboot_hal_otp_program_cell(uint32_t addr)
+{
+#if QUILLA_QBOOT_SECPROG_AVAILABLE
+  /* GD32 OTP cells are byte-granular (SOC_OTP_CELL_SIZE=1): one cell is one
+   * byte, burned by the existing one-time-program primitive. */
+  return quilla_qboot_hal_otp_program_byte(addr, 0x00U);
+#else
+  (void)addr;
+  return -1;
+#endif
+}
+
+int
+quilla_qboot_hal_otp_wrprot_status(void)
+{
+  /* True-OTP part: no WRP-protected counter region exists and the deferred
+   * sync dance never runs, so the state is a constant. */
+  return 0;
+}
+
+void
+quilla_qboot_hal_otp_wrprot_set(int protect)
+{
+  /* True-OTP part: never called (quilla_qboot_otp_sync compiles to a no-op
+   * without a write-protected NV counter region). A stub keeps the HAL contract complete. */
+  (void)protect;
 }
 
 void

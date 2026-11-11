@@ -173,6 +173,149 @@ quilla_qboot_hal_flash_erase_range(uint32_t base, uint32_t size)
   return 0;
 }
 
+int
+quilla_qboot_hal_otp_program_byte(uint32_t addr, uint8_t value)
+{
+  /* PY32F040xB has no OTP area (SOC_OTP_AVAILABLE=0 in soc.h): the reference
+   * manual documents only the Information block, none of which is a
+   * one-time-programmable user area. The hardware monotonic counter uses the
+   * WRP-protected write-protected NV counter region instead (see otp_program_cell below);
+   * this OTP-byte primitive remains a stub. */
+  (void)addr;
+  (void)value;
+  return -1;
+}
+
+#if QUILLA_QBOOT_WPP
+/* One zeroed programming cell. PY32F040 flash programs whole 256-byte pages
+ * (SOC_OTP_CELL_SIZE), so burning one counter cell means writing one page of
+ * zeros onto a still-erased page. Kept in rodata: no stack pressure inside
+ * the boot path, and the cost only exists when QUILLA_QBOOT_OTP_COUNTER is
+ * enabled. */
+static const uint8_t otp_zero_cell[QUILLA_QBOOT_OTP_CELL_SIZE]
+    QUILLA_QBOOT_ALIGNED = {0U};
+
+/* Which FLASH->WRPR bit guards the counter region: PY32 WRP sectors are
+ * 8 KB and the region is exactly one sector at the top of flash. */
+static uint32_t
+otp_wrp_bit(void)
+{
+  return (SOC_OTP_WRPROT_BASE - 0x08000000UL) / SOC_OTP_WRPROT_SIZE;
+}
+#endif
+
+int
+quilla_qboot_hal_otp_program_cell(uint32_t addr)
+{
+#if QUILLA_QBOOT_WPP
+  uint32_t i;
+  uint8_t b;
+
+  if((addr < SOC_OTP_WRPROT_BASE) ||
+     (addr >= (SOC_OTP_WRPROT_BASE + SOC_OTP_WRPROT_SIZE)) ||
+     ((addr % (uint32_t)SOC_OTP_CELL_SIZE) != 0U)) {
+    return -1;
+  }
+  /* Programming an already-programmed page silently leaves it unchanged
+   * (flash can only clear bits), so refuse any cell that is not virgin. */
+  for(i = 0U; i < (uint32_t)SOC_OTP_CELL_SIZE; i++) {
+    quilla_qboot_hal_flash_read(addr + i, &b, 1U);
+    if(b != 0xFFU) {
+      return -3;
+    }
+  }
+  if(HAL_FLASH_Unlock() != HAL_OK) {
+    return -1;
+  }
+  if(HAL_FLASH_PageProgram(addr, (uint32_t *)(uintptr_t)otp_zero_cell)
+     != HAL_OK) {
+    (void)HAL_FLASH_Lock();
+    return -3;
+  }
+  (void)HAL_FLASH_Lock();
+  /* Read-back confirmation: a burned cell MUST read all zero. */
+  for(i = 0U; i < (uint32_t)SOC_OTP_CELL_SIZE; i++) {
+    quilla_qboot_hal_flash_read(addr + i, &b, 1U);
+    if(b != 0x00U) {
+      return -3;
+    }
+  }
+  return 0;
+#else
+  (void)addr;
+  return -1;
+#endif
+}
+
+int
+quilla_qboot_hal_otp_wrprot_status(void)
+{
+#if QUILLA_QBOOT_WPP
+  /* FLASH->WRPR mirrors the loaded option bytes after reset; the WRP bits
+   * are active-low: bit cleared = sector write-protected. */
+  uint32_t bit = otp_wrp_bit();
+
+  return (((FLASH->WRPR >> bit) & 1UL) == 0UL) ? 1 : 0;
+#else
+  return 0;
+#endif
+}
+
+void
+quilla_qboot_hal_otp_wrprot_set(int protect)
+{
+#if QUILLA_QBOOT_WPP
+  uint32_t wrpr;
+  uint32_t bit = otp_wrp_bit();
+  uint32_t guard;
+  int_master_status_t st = quilla_qboot_hal_int_disable();
+
+  if(HAL_FLASH_OB_Unlock() != HAL_OK) {
+    quilla_qboot_hal_int_restore(st);
+    return;                     /* caller retries on the next boot */
+  }
+
+  /* Rewrite only the WRP field; FLASH->OPTR / FLASH->SDKR still hold the
+   * currently loaded values, and the option-byte program copies them all
+   * back unchanged. */
+  wrpr = FLASH->WRPR;
+  if(protect != 0) {
+    wrpr &= ~(1UL << bit);      /* active-low: clear = protected */
+  } else {
+    wrpr |= (1UL << bit);
+  }
+  FLASH->WRPR = wrpr;
+
+  FLASH->CR |= FLASH_CR_OPTSTRT;
+  /* Program trigger, same mechanism as the vendor option-byte routines. */
+  (*(volatile uint32_t *)(uintptr_t)0x40022080UL) = 0xFFU;
+  for(guard = 0U; guard < 8000000U; guard++) {
+    if((FLASH->SR & FLASH_SR_BSY) == 0U) {
+      break;
+    }
+  }
+  if((FLASH->SR & FLASH_SR_BSY) != 0U) {
+    /* Program never completed: do NOT launch a reload -- returning leaves
+     * the caller in a state that retries on the next boot instead of
+     * resetting in a loop. */
+    (void)HAL_FLASH_OB_Lock();
+    quilla_qboot_hal_int_restore(st);
+    return;
+  }
+  (void)HAL_FLASH_OB_Lock();
+
+  /* Reload the option bytes: OBL_LAUNCH resets the chip and this call never
+   * returns (the vendor routine documents "Option byte launch generates
+   * Option byte reset"). */
+  (void)HAL_FLASH_OB_Launch();
+  quilla_qboot_hal_reboot();    /* belt and braces; never reached */
+  while(1) {
+  }
+#else
+  (void)protect;
+#endif
+}
+
 void
 quilla_qboot_hal_reboot(void)
 {

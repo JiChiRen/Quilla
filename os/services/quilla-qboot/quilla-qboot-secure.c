@@ -64,6 +64,7 @@
 #include "quilla-qboot-secure.h"
 
 #include "quilla-qboot-meta.h"
+#include "quilla-qboot-otp.h"
 #include "quilla-ed25519.h"
 #include "sha256.h"
 
@@ -74,6 +75,25 @@
  * bring-up. Retained as a no-op so the phase structure stays visible in
  * source without any UART traffic. */
 #define QB_MARK(s)  ((void)0)
+
+/* ---- Default-key reminder ------------------------------------------------
+ * The repository default key is publicly known: its private half ships in
+ * tools/_keytest/private.hex, so anyone holding this repository can sign an
+ * image this device will accept. Warn (do not error) so replacement is never
+ * silently forgotten; shipping the default key remains the customer's call.
+ *
+ * This sits in the one TU that instantiates the key, not in
+ * quilla-qboot-pubkey.h: a header would repeat the warning in every including
+ * translation unit. Exactly one warning per QBOOT build, none once a product
+ * key is provisioned (QUILLA_SB_USING_DEFAULT_KEY is then undefined).
+ * ------------------------------------------------------------------------- */
+#if defined(QUILLA_SB_USING_DEFAULT_KEY)
+#if defined(QUILLA_PRODUCTION_BUILD)
+#warning "QBOOT: PRODUCTION build uses the repository default public key - provision your own keypair before shipment"
+#else
+#warning "QBOOT: repository default public key in use - provision your own keypair before shipment"
+#endif
+#endif
 
 /* The provisioned verification key. Blank (erased) keeps the gate off. */
 static const uint8_t pubkey[QUILLA_SECURE_BOOT_KEY_SIZE] =
@@ -245,16 +265,47 @@ uint32_t
 quilla_qboot_secure_min_version_get(void)
 {
   quilla_meta_state_t s;
+  uint32_t floor;
+
   quilla_qboot_meta_get(&s);
-  return s.floor;
+  floor = s.floor;
+
+#if QUILLA_QBOOT_OTP_COUNTER
+  /* Hardware monotonic counter: the OTP value is a second, tam-resistant
+   * floor. An attacker who erases/rewrites the rewritable META region can
+   * replay an older but genuinely signed manifest+image pair; the OTP bytes
+   * cannot be erased, so the burned count still rejects that replay. The
+   * effective floor is the higher of the two carriers. */
+  {
+    uint32_t otp = quilla_qboot_otp_counter_get();
+    if(otp > floor) {
+      floor = otp;
+    }
+  }
+#endif
+
+  return floor;
 }
 
 int
 quilla_qboot_secure_min_version_set(uint32_t version)
 {
+  int rc;
+
   /* quilla_qboot_meta_set_floor() itself skips the commit when version is at or
    * below the current floor, so a pointless record is never written. */
-  return quilla_qboot_meta_set_floor(version);
+  rc = quilla_qboot_meta_set_floor(version);
+
+#if QUILLA_QBOOT_OTP_COUNTER
+  /* Ratchet the hardware monotonic counter to the same value. Best effort,
+   * like the META ratchet: a failed burn must not brick a device whose image
+   * is otherwise authentic, so the signature remains the gate. Capacity
+   * exhaustion (return 1) hands future state over to the META flash floor;
+   * see quilla-qboot-otp.c and doc/anti-rollback-counter.md. */
+  (void)quilla_qboot_otp_floor_ratchet(version);
+#endif
+
+  return rc;
 }
 
 int

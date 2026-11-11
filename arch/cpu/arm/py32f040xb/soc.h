@@ -66,6 +66,63 @@
 #define SOC_FLASH_END          0x0801FFFFUL  /**< PY32F040xB: 128 KiB flash */
 /** @} */
 /*----------------------------------------------------------------------------*/
+/** \name OTP (one-time-programmable) geometry
+ * @{
+ */
+/** \brief No genuine OTP area on this MCU.
+ *
+ *  Every Quilla MCU port MUST define SOC_OTP_AVAILABLE in its
+ *  arch/cpu/<arch>/<mcu>/soc.h (see the GD32F502VE soc.h for the full
+ *  contract). The PY32F040 reference manual documents only the Information
+ *  block (FT bytes / UID / Option bytes / system memory) -- none of it is a
+ *  one-time-programmable user area, so the hardware monotonic counter is not
+ *  available and the QBOOT build emits a warning. The anti-rollback floor
+ *  then lives solely in the rewritable META flash log (quilla-qboot-meta.c).
+ */
+#define SOC_OTP_AVAILABLE      0UL
+
+/**
+ * \name Write-protected NV counter region (WRP-protected main flash)
+ *
+ * PY32F040 has no true OTP, but its main flash supports write protection
+ * (WRP) with an 8 KB granularity. When the WPP level is selected
+ * (QUILLA_QBOOT_HW_COUNTER_LEVEL = QUILLA_QBOOT_HW_COUNTER_WPP), QBOOT
+ * reserves the TOP 8 KB sector as the counter region and keeps it
+ * write-protected at all times except inside the burn window
+ * (option-byte change + reload reset).
+ *
+ * Selecting the WPP level therefore RESERVES the top 8 KB of main flash:
+ * application images must not extend into it (QIAP erase/write of the
+ * protected sector fails loudly with WRPERR). Without the WPP level selected
+ * the reservation costs nothing -- no resets, no option-byte wear, no flash
+ * loss beyond what the linker already places.
+ *
+ * This is CONFIGURABLE hardware, not silicon physics: an attacker able to
+ * reprogram the option bytes can drop the protection. See
+ * doc/anti-rollback-counter.md section 2.4 for the security annotation.
+ *
+ * Every Quilla MCU port that lacks true OTP MUST declare either
+ * SOC_WPP_AVAILABLE=1 (with BASE/SIZE/CELL_SIZE, one whole WRP
+ * sector) or SOC_WPP_AVAILABLE=0.
+ * @{
+ */
+#define SOC_WPP_AVAILABLE  1UL
+#define SOC_OTP_WRPROT_BASE       0x0801E000UL  /**< top 8 KB WRP sector (16th of 16) */
+#define SOC_OTP_WRPROT_SIZE       0x00002000UL  /**< one whole WRP sector, 8 KB */
+/** Programming granularity: PY32F040 flash programs whole 256-byte pages
+ * (FLASH_PAGE_SIZE); one counter cell is therefore one page. */
+#define SOC_OTP_CELL_SIZE         256UL
+
+/* The hardware-counter enablement LEVEL is a Quilla system-level decision
+ * (QUILLA_QBOOT_HW_COUNTER_LEVEL), defined in
+ * os/services/quilla-qboot/quilla-qboot-secure.h and defaulting to WPP for this
+ * WRP-only part. It is intentionally NOT set here: keeping the switch at the
+ * system level lets GCC and Keil share one source of truth with no
+ * build-command macro. The APP partition is shrunk to match the reserved
+ * counter region in quilla-qboot-hal.h. */
+/** @} */
+/** @} */
+/*----------------------------------------------------------------------------*/
 /** \name SoC functions
  * @{
  */

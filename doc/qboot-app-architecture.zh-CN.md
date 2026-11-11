@@ -104,7 +104,7 @@ APP 不能再用默认的 `VTOR = 0x08000000`。必须在 APP 构建里把 `SCB-
 - **宏**：`-DUSE_HAL_DRIVER -D<device> -DQBOOT_BUILD`；**优化 `-Os`**；QBOOT 链接脚本。
 - **剔除（APP 专属，严禁进 QBOOT）**：网络栈、显示、SPI DMA、CoAP/SNMP、RPL、TSCH、CTIMER/STIMER、AUTOSTART，以及 LPTIM/低功耗/RTIMER 链路（`rtimer-arch.c`、`hal_lptim.c`、`lpm.c`）。
 
-> QBOOT 体积预算 24 KB。闭包经静态符号核对完整；若 `-Os` 链接后超 24K，按以下顺序再砍：`assert.c`（若未被引用，`--gc-sections` 已丢弃）；把 `clock.c` 对 `etimer` 的调用摘掉（需改 `clock.c`，工作量大，不推荐）；仍超则回调第 3 节把 `APP_START` 后移（牺牲 APP 空间）。GD32F502VE（M33）注意：armclang LTO 会内联 Ed25519 验签链，使 SEALED/SEC 超出预算——须关闭 LTO（`v6Lto=0`），见 `doc/keil-qboot-app-build.md`。
+> QBOOT 体积预算 24 KB。闭包经静态符号核对完整；若 `-Os` 链接后超 24K，按以下顺序再砍：`assert.c`（若未被引用，`--gc-sections` 已丢弃）；把 `clock.c` 对 `etimer` 的调用摘掉（需改 `clock.c`，工作量大，不推荐）；仍超则回调第 3 节把 `APP_START` 后移（牺牲 APP 空间）。GD32F502VE（M33）注意：armclang LTO 会内联 Ed25519 验签链，使 SEALED/SECURED 超出预算——须关闭 LTO（`v6Lto=0`），见 `doc/keil-qboot-app-build.md`。
 
 ---
 
@@ -199,7 +199,7 @@ QBOOT 上电**默认不**直接收二进制升级帧，而是先判断标志（�
 > ⚠️ 在 `qiap` 命令之前发送的任何二进制帧（含 ENTER/DATA/END）都会被 shell 当作命令解析或静默丢弃，升级无法启动。务必先敲 `qiap`。
 > 典型上位机序列（经 `swqboot` 进入 QBOOT 的场景）：`swqboot`（APP 内，置 QBOOT 标志并复位）→ 复位进 QBOOT shell → 发 `qiap` → 发 ENTER/DATA/END → 成功复位进新 APP。
 
-链路：复用现有 shell 串口（PY32F040xB：USART2 / PA2/PA3 / DMA；GD32F502VE：USART0 / PB6/PB7 / DMA0 CH4 + IDLE 定帧；均为 115200-N-8-1，与 APP 一致）。
+链路：复用现有 shell 串口（PY32F040xB：USART2 / PA2/PA3 / DMA；GD32F502VE：USART0 / PB6/PB7 / DMA0 CH4 + IDLE 定帧；CH32V305RB：USART2 / PA2/PA3 / DMA1 CH6 + IDLE 定帧；均为 115200-N-8-1，与 APP 一致）。
 
 **协议为二进制帧**，与 shell 的行解析互不干扰：`qiap` 命令切换后，串口字节流直接喂给 `quilla_qiap_feed()` 状态机（`quilla-qiap.c`），不再走 shell 行解析。
 
@@ -332,11 +332,11 @@ version < 防回滚下限               → ERR_ROLLBACK（拒跳）
 全部通过                          → 抬下限到 version，返回 OK，跳转 APP
 ```
 
-拒跳时 QBOOT **不复位、不跳 APP**，打印原因后落交互 shell，`qiap` 仍可达——设备保持可救活而不是变砖。
+拒跳时 QBOOT **不复位、不跳 APP**，打印原因后进入交互 shell，`qiap` 命令仍可达——设备保持可恢复状态，而非无法启动。
 
 ### 防回滚下限
 
-下限是磨损均衡 META 记录的一个字段（QMTL meta 块，`QUILLA_META_OFF_FLOOR`），单调递增。升级提交与启动校验通过均将下限抬至当前版本。版本**属于已签名的固件镜像**（烧录在 `QUILLA_QBOOT_APP_START + 0x400`，受签名覆盖），绝不接受上位机注入，QBOOT 只把下限抬到它，因此携带更低固件版本的降级（已签名）镜像被拒。抬升失败按尽力而为处理：签名已认可的镜像不应因下限写失败而变砖，签名才是主闸门。（APP 另带对该区域的自我检查 `QUILLA_APP_SECVER_SELFCHECK`——混淆、非安全控制，见 `doc/secure-boot.md` §1.1。）
+下限是磨损均衡 META 记录的一个字段（QMTL meta 块，`QUILLA_META_OFF_FLOOR`），单调递增。升级提交与启动校验通过均将下限抬至当前版本。版本**属于已签名的固件镜像**（烧录在 `QUILLA_QBOOT_APP_START + 0x400`，受签名覆盖），绝不接受上位机注入，QBOOT 只把下限抬到它，因此携带更低固件版本的降级（已签名）镜像被拒。抬升失败按尽力而为（best-effort）策略处理：签名已认可的镜像不应因下限写失败而无法启动，签名校验才是主闸门。（APP 另带对该区域的自我检查 `QUILLA_APP_SECVER_SELFCHECK`——混淆、非安全控制，见 `doc/secure-boot.md` §1.1。）
 
 ### 密钥与工具
 
@@ -344,10 +344,12 @@ version < 防回滚下限               → ERR_ROLLBACK（拒跳）
 python tools/quilla_ed25519_sign.py keygen --dir keys
 #   -> keys/private.hex（产线保管，绝不外泄）
 #   -> keys/public.hex（烧进 QBOOT）
-#   并打印：  -DQUILLA_SECURE_BOOT_PUBKEY={0x..,...,0x..}
+#   并打印分工具链的公钥注入指引
 ```
 
-把该宏加入 QBOOT 构建（Keil `Define` / `Makefile.qboot` `C_DEFS`）即启用安全启动。
+按打印的指引操作：GNU 在 `C_DEFS` 加 `-DQUILLA_SECURE_BOOT_PUBKEY={...}`；
+Keil 在 `quilla-qboot-pubkey.h` 自行添加产品分支，并在 Define 里放该分支的单个
+token（Define 按逗号分隔，放不下 `{...}` 列表）。
 私钥只留在产线，烧录时：
 
 ```bash

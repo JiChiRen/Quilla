@@ -35,7 +35,7 @@ Quilla 针对低资源微控制器上开源信息安全系统相对稀缺的现�
   - 基于 RFC 8032 Ed25519 的镜像验签、SHA-256 完整性、版本地板。三种构建变体：
     - `QBOOT_CHECK`——仅 SHA-256 完整性（无钥匙）；
     - `QBOOT_SEALED`——seal 快路径（已验证镜像跳过完整验签，PY32F040xB 上 ~0.6 s）；
-    - `QBOOT_SEC`——每次启动都完整 Ed25519 验签。
+    - `QBOOT_SECURED`——每次启动都完整 Ed25519 验签。
   - 公钥编译进 QBOOT，私钥离线留存于签名工位，绝不进入固件或仓库。
 
 - **原生可升级（QIAP）**
@@ -63,7 +63,7 @@ Quilla 针对低资源微控制器上开源信息安全系统相对稀缺的现�
 | MCU | 内核 / 主频 | Flash / SRAM | 状态 |
 | --- | --- | --- | --- |
 | PY32F040xB | Cortex-M0+ @ 48 MHz | 128 KB / 16 KB | 已上板实测 |
-| GD32F502VE | Cortex-M33 @ 160 MHz | 512 KB / 64 KB | 已上板实测（QBOOT_CHECK / QBOOT_SEC） |
+| GD32F502VE | Cortex-M33 @ 160 MHz | 512 KB / 64 KB | 已上板实测（QBOOT_CHECK / QBOOT_SECURED） |
 | CH32V305VB | RISC-V / 青稞 QingKe V4F (RV32IMAC) @ 96 MHz | 128 KB / 32 KB | 编译验证（GCC12 / EIDE）；待上板 |
 
 ### 为什么选这三颗芯片

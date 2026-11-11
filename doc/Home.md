@@ -19,6 +19,7 @@ General Contiki-NG material (build system, networking, tutorials, other platform
 | Host updater integration | `quilla-host-updater-guide.md` (quick ref: `quilla-host-updater-brief.md`) |
 | Upgrade flow & state machine | `upgrade-flow.md` |
 | Secure boot & key management | `secure-boot.md` |
+| Anti-rollback: OTP counter & no-A/B rationale | `anti-rollback-counter.md` |
 | Boot flow | `boot-flow.md` |
 | APP-facing OS API | `app-api-reference.md` |
 

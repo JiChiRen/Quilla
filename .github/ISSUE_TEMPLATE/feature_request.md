@@ -17,7 +17,7 @@ Any alternative solutions or features you have considered.
 **Scope / affected area**
 - Area (e.g. QBOOT secure boot, QIAP upgrade, OS kernel, MCU port, host tools):
 - Board / MCU (e.g. PY32F040xB, GD32F502VE, CH32V305VB):
-- Variant / image (QBOOT_CHECK / QBOOT_SEALED / QBOOT_SEC / QAPP):
+- Variant / image (QBOOT_CHECK / QBOOT_SEALED / QBOOT_SECURED / QAPP):
 - Does this touch security-relevant behaviour (image verification, anti-rollback, key management)? yes / no
 
 **Additional context**

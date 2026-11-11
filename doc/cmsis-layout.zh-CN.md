@@ -29,7 +29,7 @@ arch/cpu/arm/
 | Vendor | Device | 内核 | 状态 |
 |---|---|---|---|
 | Puya | PY32F040xB | Cortex-M0+ | 已在构建（APP / QBOOT） |
-| GigaDevice | GD32F50x | Cortex-M33 | 已在构建（APP / QBOOT；EIDE + Keil）；QBOOT_CHECK / QBOOT_SEC 已上板验证 |
+| GigaDevice | GD32F50x | Cortex-M33 | 已在构建（APP / QBOOT；EIDE + Keil）；QBOOT_CHECK / QBOOT_SECURED 已上板验证 |
 
 ## 新增 / 移动器件文件的注意事项
 

@@ -32,7 +32,7 @@ Quilla addresses the relative scarcity of open-source information-security syste
 ## Why Quilla
 
 - **Secure boot & anti-rollback**
-  - RFC 8032 Ed25519 image verification, SHA-256 integrity, and a version floor. Three build variants: `QBOOT_CHECK` (SHA-256 only, no key), `QBOOT_SEALED` (seal fast-path, ~0.6 s on PY32F040xB), `QBOOT_SEC` (full Ed25519 every boot).
+  - RFC 8032 Ed25519 image verification, SHA-256 integrity, and a version floor. Three build variants: `QBOOT_CHECK` (SHA-256 only, no key), `QBOOT_SEALED` (seal fast-path, ~0.6 s on PY32F040xB), `QBOOT_SECURED` (full Ed25519 every boot).
   - The public key is compiled into QBOOT; the private key stays offline at the signing station and never enters the firmware or the repository.
 - **Native OTA (QIAP)**
   - Ships with a dual-partition bootloader out of the box: QBOOT (bootloader) + APP. The APP is upgraded over UART from a host tool in one step — no dedicated programmer required.
@@ -55,7 +55,7 @@ Quilla addresses the relative scarcity of open-source information-security syste
 | MCU | Core / Clock | Flash / SRAM | Status |
 | --- | --- | --- | --- |
 | PY32F040xB | Cortex-M0+ @ 48 MHz | 128 KB / 16 KB | On-target verified |
-| GD32F502VE | Cortex-M33 @ 160 MHz | 512 KB / 64 KB | On-target verified (QBOOT_CHECK / QBOOT_SEC) |
+| GD32F502VE | Cortex-M33 @ 160 MHz | 512 KB / 64 KB | On-target verified (QBOOT_CHECK / QBOOT_SECURED) |
 | CH32V305VB | RISC-V / QingKe V4F (RV32IMAC) @ 96 MHz | 128 KB / 32 KB | Build verified (GCC12 / EIDE); on-target pending |
 
 ### Why these parts

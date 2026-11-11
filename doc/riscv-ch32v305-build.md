@@ -79,10 +79,10 @@ USART2, **TX = PA2 (GPIO16)**, **RX = PA3 (GPIO17)**, 115200 8-N-1. RX is DMA-dr
 make -f Makefile              # -> QAPP/QAPP.{elf,hex,bin}
 make -f Makefile.qboot        # -> QBOOT_CHECK  (SHA-256 integrity only)
 make -f Makefile.qboot.sealed # -> QBOOT_SEALED (default secure variant)
-make -f Makefile.qboot.sec    # -> QBOOT_SEC     (Ed25519 every boot)
+make -f Makefile.qboot.secured    # -> QBOOT_SECURED     (Ed25519 every boot)
 ```
 
-`QUILLA_QBOOT_VARIANT_STR` / `QUILLA_SB_BOOT_MODE` are set per Makefile (CHECK / SEALED / SEC), matching the GD32 variants.
+`QUILLA_SB_BOOT_MODE` is set per Makefile (CHECK / SEALED / SECURED), matching the GD32 variants; the `QUILLA_QBOOT_VARIANT_STR` banner tag is derived from it in `quilla-qboot-secure.h`.
 
 ## 7. Measured sizes (development-process, not a delivery spec)
 
@@ -91,11 +91,11 @@ make -f Makefile.qboot.sec    # -> QBOOT_SEC     (Ed25519 every boot)
 | QAPP | 18 453 | 192 | 10 120 |
 | QBOOT_CHECK | 23 004 | 160 | 5 456 |
 | QBOOT_SEALED | 23 108 | 160 | 5 456 |
-| QBOOT_SEC | 23 060 | 160 | 5 456 |
+| QBOOT_SECURED | 23 060 | 160 | 5 456 |
 
 All three QBOOT variants fit the 24 KiB region (≈1.4 KiB headroom, comparable to the tight GD32 SEALED). Figures vary with toolchain/software version.
 
-> **Compiler warnings**: a clean build is otherwise warning-free. The SEALED and SEC variants additionally emit the intentional default public-key `#warning` (see `doc/gd32f502ve-eide-build.md` §9) — it reminds you to replace the repository default Ed25519 key with your own before shipping, and is expected.
+> **Compiler warnings**: a clean build is otherwise warning-free. The SEALED and SECURED variants additionally emit the intentional default public-key `#warning` (see `doc/gd32f502ve-eide-build.md` §9) — it reminds you to replace the repository default Ed25519 key with your own before shipping, and is expected.
 
 ## 8. Bring-up items that need on-hardware validation
 

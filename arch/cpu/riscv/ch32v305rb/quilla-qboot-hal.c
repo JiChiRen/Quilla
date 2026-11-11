@@ -223,6 +223,139 @@ quilla_qboot_hal_flash_erase_range(uint32_t base, uint32_t size)
   return 0;
 }
 /*---------------------------------------------------------------------------*/
+int
+quilla_qboot_hal_otp_program_byte(uint32_t addr, uint8_t value)
+{
+  /* CH32V305 has no OTP area (SOC_OTP_AVAILABLE=0 in soc.h): the 128-byte
+   * user selection-word area at 0x1FFFF800 is ordinary rewritable flash that
+   * a full-chip programming erases, so it must not back a hardware monotonic
+   * counter. The counter uses the WRP-protected write-protected NV counter region instead
+   * (see otp_program_cell below); this OTP-byte primitive remains a stub. */
+  (void)addr;
+  (void)value;
+  return -1;
+}
+
+int
+quilla_qboot_hal_otp_program_cell(uint32_t addr)
+{
+#if QUILLA_QBOOT_WPP
+  uint32_t i;
+  uint8_t b;
+  int rc;
+  int_master_status_t st;
+
+  if((addr < SOC_OTP_WRPROT_BASE) ||
+     (addr >= (SOC_OTP_WRPROT_BASE + SOC_OTP_WRPROT_SIZE)) ||
+     ((addr % (uint32_t)SOC_OTP_CELL_SIZE) != 0U)) {
+    return -1;
+  }
+  /* Programming a dirty word cannot restore cleared bits, so refuse any
+   * cell that is not virgin. */
+  for(i = 0U; i < (uint32_t)SOC_OTP_CELL_SIZE; i++) {
+    quilla_qboot_hal_flash_read(addr + i, &b, 1U);
+    if(b != 0xFFU) {
+      return -3;
+    }
+  }
+  st = quilla_qboot_hal_int_disable();
+  FLASH_Unlock();
+  rc = 0;
+  if(hal_wait_not_busy() == 0U) {
+    rc = -3;
+  }
+  if((rc == 0) && (FLASH_ProgramWord(addr, 0x00000000U) != FLASH_COMPLETE)) {
+    rc = -3;
+  }
+  if((rc == 0) && (hal_wait_not_busy() == 0U)) {
+    rc = -3;
+  }
+  if((rc == 0) &&
+     (FLASH_GetFlagStatus(FLASH_FLAG_WRPRTERR) != RESET)) {
+    rc = -3;                    /* write-protected: hardware refused */
+  }
+  FLASH_Lock();
+  quilla_qboot_hal_int_restore(st);
+  if(rc != 0) {
+    return rc;
+  }
+  /* Read-back confirmation: a burned cell MUST read all zero. */
+  for(i = 0U; i < (uint32_t)SOC_OTP_CELL_SIZE; i++) {
+    quilla_qboot_hal_flash_read(addr + i, &b, 1U);
+    if(b != 0x00U) {
+      return -3;
+    }
+  }
+  return 0;
+#else
+  (void)addr;
+  return -1;
+#endif
+}
+
+int
+quilla_qboot_hal_otp_wrprot_status(void)
+{
+#if QUILLA_QBOOT_WPP
+  /* Read the RAW user selection word, not any mirror register: the stored
+   * configuration is visible immediately after programming, independent of
+   * when (soft reset vs. power-on) the controller reloads it. WRP3 covers
+   * sectors 24..31; sector 31 (the top 4 KB, SOC_OTP_WRPROT_BASE) is bit 7,
+   * active-low: bit cleared = write-protected. */
+  uint16_t wrp3 = *(volatile uint16_t *)(uintptr_t)0x1FFFF80EU;
+
+  return ((wrp3 & 0x0080U) == 0U) ? 1 : 0;
+#else
+  return 0;
+#endif
+}
+
+void
+quilla_qboot_hal_otp_wrprot_set(int protect)
+{
+#if QUILLA_QBOOT_WPP
+  FLASH_Status st;
+  uint16_t wrp3;
+  int_master_status_t saved = quilla_qboot_hal_int_disable();
+
+  /* Vendor routine: OB unlock, preserve RDPR/USER/Data0/Data1, erase the
+   * selection words, rewrite them with WRP3 updated. Passing 0 clears every
+   * WRP bit (all data bytes back to 0xFF). */
+  st = FLASH_EnableWriteProtection(protect != 0
+                                   ? FLASH_WRProt_Sectors31to127
+                                   : 0U);
+  (void)hal_wait_not_busy();
+  if(st != FLASH_COMPLETE) {
+    quilla_qboot_hal_int_restore(saved);
+    return;                     /* caller retries on the next boot */
+  }
+  /* Confirm the stored configuration actually landed before resetting, so
+   * a failed program cannot produce a reset loop. */
+  wrp3 = *(volatile uint16_t *)(uintptr_t)0x1FFFF80EU;
+  if(protect != 0) {
+    if((wrp3 & 0x0080U) != 0U) {
+      quilla_qboot_hal_int_restore(saved);
+      return;
+    }
+  } else {
+    if((wrp3 & 0x0080U) == 0U) {
+      quilla_qboot_hal_int_restore(saved);
+      return;
+    }
+  }
+
+  /* The option-byte reload happens on reset. WCH documents the reload on
+   * power-on; whether a soft reset reloads too is unconfirmed on hardware.
+   * Either way the configuration is stored (verified above) and the boot
+   * sync state machine is idempotent across the gap. */
+  quilla_qboot_hal_reboot();    /* never returns */
+  while(1) {
+  }
+#else
+  (void)protect;
+#endif
+}
+/*---------------------------------------------------------------------------*/
 void
 quilla_qboot_hal_reboot(void)
 {

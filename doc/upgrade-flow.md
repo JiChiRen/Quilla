@@ -258,7 +258,7 @@ payload = `signature(64)`; the length must be exactly 64 B.
 | --- | --- |
 | `!session_active \|\| !end_seen` | NAK `0xC4/0x07` |
 | `len != 64` | NAK `0xC4/0x07` |
-| No public key burned | `commit_app()` directly + ACK `0xC4` (prevents SIGN frames from bricking devices without secure boot) |
+| No public key burned | `commit_app()` directly + ACK `0xC4` (prevents SIGN frames from rendering devices unbootable when secure boot is absent) |
 | `rx_total_len == 0` or `> MAX_IMAGE_LEN` (`APP_END − APP_START + 1`; `0x19000` on PY32F040xB) | NAK `0xC4/0x07` |
 
 ### 11.2 Computing the Digest On the Fly

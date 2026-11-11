@@ -222,7 +222,7 @@ python tools/quilla_host_updater.py COM3 app.bin -q
 |----------|---------|------|
 | **QBOOT_CHECK** | 不传 | 无钥匙；END 帧直接写完整性 manifest 并提交。**切勿传 `--key`**——设备收到 END 后已提交并复位，随后的 SIGN 帧会超时并误报失败。 |
 | **QBOOT_SEALED** | `tools/_keytest/private.hex`（默认私钥） | 研发 / 联调用，默认公钥已编译进 QBOOT。 |
-| **QBOOT_SEC** | 与 SEALED 同一把——默认私钥 `tools/_keytest/private.hex`，或替换后的自有私钥 | 必须与编译进 QBOOT 的公钥匹配（默认公钥⇔默认私钥；自有公钥⇔自有私钥），否则 SIGN 验签失败、升级被拒。 |
+| **QBOOT_SECURED** | 与 SEALED 同一把——默认私钥 `tools/_keytest/private.hex`，或替换后的自有私钥 | 必须与编译进 QBOOT 的公钥匹配（默认公钥⇔默认私钥；自有公钥⇔自有私钥），否则 SIGN 验签失败、升级被拒。 |
 
 示例：
 
@@ -233,7 +233,7 @@ python tools/quilla_host_updater.py COM3 app.bin
 # QBOOT_SEALED（研发态，默认(公开)钥匙）
 python tools/quilla_host_updater.py COM3 app.bin --key tools/_keytest/private.hex
 
-# QBOOT_SEC（量产态，SECURE 模式每电验签；钥匙与 SEALED 同一把）
+# QBOOT_SECURED（量产态，SECURE 模式每电验签；钥匙与 SEALED 同一把）
 python tools/quilla_host_updater.py COM3 app.bin --key keys/product_priv.hex
 ```
 

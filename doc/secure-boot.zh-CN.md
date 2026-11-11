@@ -7,7 +7,7 @@
 > 阅读对象：负责固件构建、发布与认证的开发者 / 安全负责人。
 > 密钥管理（默认公钥、自有公钥、私钥存放）见 `tools/README.md`。
 > 硬约束：默认公钥（随仓库公开）禁止随产品交付；私钥须离线保存，仅留在签名工位，绝不进固件或仓库；
-> 量产构建可定义 `QUILLA_PRODUCTION_BUILD`——若仍编译进仓库默认公钥，头文件会发编译警告提醒替换（不再以 `#error` 硬拦）。
+> 量产构建可定义 `QUILLA_PRODUCTION_BUILD`——若仍编译进仓库默认公钥，`quilla-qboot-secure.c` 会发一条编译警告提醒替换（不再以 `#error` 硬拦）。
 
 ---
 
@@ -34,7 +34,7 @@ QBOOT 把控制权交给 APP 之前，按以下顺序建立信任（步骤 1 永
 APP 镜像携带一个 32 位安全版本（`QUILLA_APP_SECURITY_VERSION`），烧录在固定 Flash 地址 `QUILLA_QBOOT_APP_START + 0x400`（`0x08007400`），位于被签名的 `image_len` 之内。因此它受 SHA-256 摘要与 Ed25519 签名覆盖：攻击者在无私钥时无法篡改。QBOOT 在启动（`quilla_qboot_secure_fw_version()`）与 QIAP SIGN 阶段读取它，与持久化下限比较，低于则拒绝（`QUILLA_SB_ERR_ROLLBACK`）。用真实私钥签出的降级镜像只是带着更低的版本，同样被拒。该版本**从不由 QBOOT 持有、也从不由上位机下发**——只有真正的（已签名）发布才能确定其值。每次"不可被回滚"的固件发布都应抬高 `QUILLA_APP_SECURITY_VERSION`。
 
 **第二层——APP 侧混淆（`QUILLA_APP_SECVER_SELFCHECK`，默认开）。**
-APP 在启动期额外对 Flash 中的该区域做自检（`quilla_app_secver_selfcheck()`），若 magic / version 内部不一致则停机。**诚实边界——依赖前请先读：** 这是**混淆（obfuscation），不是安全控制**。它唯一的作用是**抬高被授权私钥的终端用户的门槛**——这类用户本可定位二进制里显性的安全版本字节、改大、重新签名，用一行修改就绕过 QBOOT 闸门。它**挡不住**持有私钥的坚定攻击者：区域与编译期常量都在被签名镜像内、受签名覆盖，持钥匙者总能造出一致的（`magic`, `version`）对并重新签名。真正的闸门仍是第一层（签名 + 下限）；量产地仍须**健全的私钥授权**，而能挡住持钥匙者回滚的唯一控制是**硬件单调计数器（eFuse/OTP）**。若干扰调试流程，可用 `-DQUILLA_APP_SECVER_SELFCHECK=0` 关闭第二层。
+APP 在启动期额外对 Flash 中的该区域做自检（`quilla_app_secver_selfcheck()`），若 magic / version 内部不一致则停机。**诚实边界——依赖前请先读：** 这是**混淆（obfuscation），不是安全控制**。它唯一的作用是**抬高被授权私钥的终端用户的门槛**——这类用户本可定位二进制里显性的安全版本字节、改大、重新签名，用一行修改就绕过 QBOOT 闸门。它**无法阻止**持有私钥的攻击者：区域与编译期常量都在被签名镜像内、受签名覆盖，持钥匙者总能造出一致的（`magic`, `version`）对并重新签名。真正的闸门仍是第一层（签名 + 下限）；量产地仍须**健全的私钥授权**，而能挡住持钥匙者回滚的唯一控制是**硬件单调计数器（eFuse/OTP）**（自 CR-0052 起对具备 OTP 的 MCU 已实现，见 `anti-rollback-counter.zh-CN.md`）。若干扰调试流程，可用 `-DQUILLA_APP_SECVER_SELFCHECK=0` 关闭第二层。
 
 > **密钥管理推论：** 因版本已是签名镜像的一部分，上位机升级工具（`quilla_host_updater.py`）不再传输版本——它只发镜像，版本归属签它的人。无钥匙（QBOOT_CHECK）安装仍写完整性 manifest、把版本当作下限占位，但那里不强制防回滚（无钥匙 ⇒ 无可信下限）。
 
@@ -45,14 +45,14 @@ APP 在启动期额外对 Flash 中的该区域做自检（`quilla_app_secver_se
 
 ## 2. 三种构建变体
 
-变体由构建期宏决定，输出不同的 QBOOT 镜像（banner 中以 `[CHECK]` / `[SEALED]` / `[SEC]` 区分）。
+变体由构建期宏决定，输出不同的 QBOOT 镜像（banner 中以 `[CHECK]` / `[SEALED]` / `[SECURED]` 区分）。
 三者启动策略与适用场景如下：
 
-| 变体 | 钥匙（SEALED / SEC 同一把） | 启动策略（启动模式） | banner | 防回滚 | 是否声称 secure boot | 适用 |
+| 变体 | 钥匙（SEALED / SECURED 同一把） | 启动策略（启动模式） | banner | 防回滚 | 是否声称 secure boot | 适用 |
 |------|----------------------------|----------------------|--------|--------|----------------------|------|
 | **QBOOT_CHECK** | 无 | 仅完整性（CHECK 模式，步骤 1） | `[CHECK]` | 否 | 否（仅完整性） | 开发 / 内部 / 无需真实性的产线 |
 | **QBOOT_SEALED** | 默认钥匙（可替换为自有，见 §2.5） | SEALED 模式：SHA-256(~0.6 s，PY32F040xB) 比对 seal，命中即跳过验签；首启 / 换镜像回退 Ed25519 一次后重新 seal | `[SEALED]` | 是（固件版本，§1.1） | 是（依赖 RDP 锁 SWD） | 研发联调 + 量产（开 RDP，SL1/SL2） |
-| **QBOOT_SEC** | 默认钥匙（与 SEALED 同一把，可替换为自有，见 §2.5） | SECURE 模式：每次启动都 Ed25519 验签（~20 s，PY32F040xB） | `[SEC]` | 是（固件版本，§1.1） | 是（每电重新验证） | 量产（认证轮廓要求每电再认证，SL3/SL4） |
+| **QBOOT_SECURED** | 默认钥匙（与 SEALED 同一把，可替换为自有，见 §2.5） | SECURE 模式：每次启动都 Ed25519 验签（~20 s，PY32F040xB） | `[SECURED]` | 是（固件版本，§1.1） | 是（每电重新验证） | 量产（认证轮廓要求每电再认证，SL3/SL4） |
 
 ### 2.1 QBOOT_CHECK（仅传输完整性）
 
@@ -64,14 +64,14 @@ APP 在启动期额外对 Flash 中的该区域做自检（`quilla_app_secver_se
 ### 2.2 QBOOT_SEALED（SEALED 启动模式，默认(公开)钥匙）
 
 - 启动采用 **SEALED 模式**：稳态下每次启动只重算 SHA-256（PY32F040xB 上 ~0.6 s，随镜像大小线性变化）并与 META 记录中的 seal 比对，**跳过 Ed25519 验签**；仅在首次启动 / 换镜像（SWD 重烧、seal 丢失或过期）时才跑完整 Ed25519（PY32F040xB 上 ~20 s），通过后重新 seal。
-- 编译进的**钥匙与 QBOOT_SEC 完全相同**：默认是仓库公开的"默认公钥"（`QUILLA_QBOOT_DEFAULT_KEY`，配套私钥 `tools/_keytest/private.hex` 随仓库公开——任何人都能签出它被接受的镜像）。
+- 编译进的**钥匙与 QBOOT_SECURED 完全相同**：默认是仓库公开的"默认公钥"（`QUILLA_QBOOT_DEFAULT_KEY`，配套私钥 `tools/_keytest/private.hex` 随仓库公开——任何人都能签出它被接受的镜像）。
 - **"能否出货"取决于钥匙是否仍是默认公开钥匙，而非 SEALED 这个变体名**：换成自有钥匙后，SEALED 模式本身（配合 RDP 锁 SWD）是合法的量产配置（SL1/SL2）。若仍用默认钥匙，则等同把私钥交出去，**禁止出货**。钥匙替换见 §2.5。
 
-### 2.3 QBOOT_SEC（SECURE 启动模式，默认(公开)钥匙）
+### 2.3 QBOOT_SECURED（SECURE 启动模式，默认(公开)钥匙）
 
 - 启动采用 **SECURE 模式**：每次上电都做完整 Ed25519 验签（PY32F040xB 上 ~20 s，与镜像大小无关），**不使用 seal 快路径**。适用于认证轮廓明确要求"每次启动重新验证真实性"的产品（SL3/SL4，或威胁模型把运行时妥协 / RDP 不足信纳入范围）。
 - 编译进的**钥匙与 QBOOT_SEALED 完全相同**：默认是仓库公开"默认公钥"，出货前须替换为自有公钥。**两者的区别只在启动校验策略（SEALED 快路径 vs SECURE 每电验签），不在钥匙**——替换方式对两者一模一样，见 §2.5。
-- 可定义 `QUILLA_PRODUCTION_BUILD`——仅让"仍编译进默认公钥"的编译警告更醒目，不再触发编译失败；是否替换由客户决定。
+- 可定义 `QUILLA_PRODUCTION_BUILD`——仅让"仍编译进默认公钥"的那条编译警告（由 `quilla-qboot-secure.c` 发出）措辞更醒目，不再触发编译失败；是否替换由客户决定。
 
 ### 2.4 启动模式（SECURE / SEALED / CHECK）与变体的关系
 
@@ -89,22 +89,22 @@ APP 在启动期额外对 Flash 中的该区域做自检（`quilla_app_secver_se
 >
 > **注意**：本文所有耗时数据均为**开发过程实测值**，会随软件版本与工具链变化而不同，**不构成交付规格**；请在自己的构建上复测。
 
-三个变体的出厂启动模式分别为：**QBOOT_CHECK = CHECK 模式**；**QBOOT_SEALED = SEALED 模式**；**QBOOT_SEC = SECURE 模式**。如需进一步调整，把对应变体的 `QUILLA_SB_BOOT_MODE` 改为 `SECURE` 即可。
+三个变体的出厂启动模式分别为：**QBOOT_CHECK = CHECK 模式**；**QBOOT_SEALED = SEALED 模式**；**QBOOT_SECURED = SECURE 模式**。如需进一步调整，把对应变体的 `QUILLA_SB_BOOT_MODE` 改为 `SECURE` 即可。
 
-> **SEALED / SEC 声称安全的量产硬性前提（不可绕过性，Non-Bypassability）：**
+> **SEALED / SECURED 声称安全的量产硬性前提（不可绕过性，Non-Bypassability）：**
 > 1. **锁调试口（RDP / 锁 SWD）**：SWD 不锁，攻击者可改写 APP、manifest 与 META 记录中的 seal，seal 比对即被绕过。
-> 2. **禁止暴露未认证烧录接口**：SEALED / SEC 出货时，任何"不经签名验签即可直接写 Flash"的固件入口都不得暴露——包括调试口（SWD / JTAG）、DFU / ROM bootloader，以及任何直写 Flash 的串口 / USB / 板内命令。只要存在一条绕过 Ed25519 闸门的未认证写 Flash 路径，secure boot 即被直接旁路，变体名与验签策略都形同虚设。合法签名升级只能走 QIAP 串口升级（§4），由 SIGN 帧验签通过后才写 manifest 并提交。
-> 3. 上述要求对应 **NIST SP 800-193 §4.2.1.3 的不可绕过性（Non-Bypassability）**：认证更新机制必须能阻止固件被旁路 / 回退到未授权状态。**QBOOT_SEALED / QBOOT_SEC 要声称安全，量产必须同时满足"锁调试口 + 禁暴露未认证烧录接口"；仅锁 SWD 不足以覆盖 DFU / 直写命令等其它入口。**
+> 2. **禁止暴露未认证烧录接口**：SEALED / SECURED 出货时，任何"不经签名验签即可直接写 Flash"的固件入口都不得暴露——包括调试口（SWD / JTAG）、DFU / ROM bootloader，以及任何直写 Flash 的串口 / USB / 板内命令。只要存在一条绕过 Ed25519 闸门的未认证写 Flash 路径，secure boot 即被直接旁路，变体名与验签策略都形同虚设。合法签名升级只能走 QIAP 串口升级（§4），由 SIGN 帧验签通过后才写 manifest 并提交。
+> 3. 上述要求对应 **NIST SP 800-193 §4.2.1.3 的不可绕过性（Non-Bypassability）**：认证更新机制必须能阻止固件被旁路 / 回退到未授权状态。**QBOOT_SEALED / QBOOT_SECURED 要声称安全，量产必须同时满足"锁调试口 + 禁暴露未认证烧录接口"；仅锁 SWD 不足以覆盖 DFU / 直写命令等其它入口。**
 
-### 2.5 默认钥匙替换（SEALED / SEC 通用）
+### 2.5 默认钥匙替换（SEALED / SECURED 通用）
 
-SEALED 与 SEC 两个变体编译进的是**同一把钥匙**：默认是随仓库公开的"默认钥匙"。无论选哪个变体量产，都必须把它换成客户自有密钥对（两者的替换方式完全一致）：
+SEALED 与 SECURED 两个变体编译进的是**同一把钥匙**：默认是随仓库公开的"默认钥匙"。无论选哪个变体量产，都必须把它换成客户自有密钥对（两者的替换方式完全一致）：
 
 1. **离线生成**：`tools/quilla_ed25519_sign.py keygen` → 产出 `private.hex`（私钥）+ `public.hex`（公钥）。
-2. **公钥编入 QBOOT**：把自有公钥以 `-DQUILLA_SECURE_BOOT_PUBKEY={...}` 或产品宏编入，替换默认的 `QUILLA_QBOOT_DEFAULT_KEY` 分支；分支模板见 `os/services/quilla-qboot/quilla-qboot-pubkey.h` 头注释与 `tools/README.md`。
+2. **公钥编入 QBOOT**：GNU/EIDE 在 `C_DEFS` 加 `-DQUILLA_SECURE_BOOT_PUBKEY={...}`；Keil 的 Define 按逗号分隔、放不下该列表，须在 `os/services/quilla-qboot/quilla-qboot-pubkey.h` 自行添加产品分支并在 Define 里选它的 token。**仓库没有预置产品分支**——模板见 `tools/_keytest/README.md` §3.2，同时移除构建里的 `QUILLA_QBOOT_DEFAULT_KEY`。`quilla_ed25519_sign.py keygen` 会打印两种流程。
 3. **私钥只留签名工位**，离线保存，**绝不进固件或仓库**；烧录时由 `quilla_host_updater.py --key` 指向它（见 `doc/quilla-host-updater-guide.md` §10.3）。
 
-> 若仍编译进默认公钥，头文件会发 `#warning`（`QUILLA_PRODUCTION_BUILD` 时更醒目）提醒替换——
+> 若仍编译进默认公钥，`quilla-qboot-secure.c` 会发一条 `#warning`（`QUILLA_PRODUCTION_BUILD` 时措辞更醒目）提醒替换——
 > **是否替换由客户决定**，但流出默认钥匙等于把私钥交给任何人（任何人都能签出设备接受的镜像），
 > 构成虚假安全声明。
 
@@ -116,26 +116,26 @@ SEALED 与 SEC 两个变体编译进的是**同一把钥匙**：默认是随仓�
 
 | 变体 | Makefile | 关键 `C_DEFS`（节选） |
 |------|----------|------------------------|
-| QBOOT_CHECK | `Makefile.qboot` | `-DQUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_CHECK -DQUILLA_QBOOT_VARIANT_STR=\"CHECK\"` |
-| QBOOT_SEALED | `Makefile.qboot.sealed` | `-DQUILLA_QBOOT_DEFAULT_KEY -DQUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_SEALED -DQUILLA_QBOOT_VARIANT_STR=\"SEALED\"` |
-| QBOOT_SEC | `Makefile.qboot.sec` | `-DQUILLA_PRODUCTION_BUILD -DQUILLA_QBOOT_DEFAULT_KEY -DQUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_SECURE -DQUILLA_QBOOT_VARIANT_STR=\"SEC\"`（钥匙注入见该 makefile 头部注释） |
+| QBOOT_CHECK | `Makefile.qboot` | `-DQUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_CHECK` |
+| QBOOT_SEALED | `Makefile.qboot.sealed` | `-DQUILLA_QBOOT_DEFAULT_KEY -DQUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_SEALED` |
+| QBOOT_SECURED | `Makefile.qboot.secured` | `-DQUILLA_PRODUCTION_BUILD -DQUILLA_QBOOT_DEFAULT_KEY -DQUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_SECURE`（钥匙注入见该 makefile 头部注释） |
 
-`quilla-qboot-secure.h` 中 `#ifndef QUILLA_SB_BOOT_MODE` 默认取 `SEALED`。不定义即 SEALED（带钥匙时即完整验签，无钥匙时退化为仅完整性）。
+`quilla-qboot-secure.h` 中 `#ifndef QUILLA_SB_BOOT_MODE` 默认取 `SEALED`。不定义即 SEALED（带钥匙时即完整验签，无钥匙时退化为仅完整性）。banner 标签 `QUILLA_QBOOT_VARIANT_STR`（CHECK / SEALED / SECURED）由该模式在同一头文件内派生，构建工程不再以 `-D` 传入。
 
 ### 3.2 Keil（`user/<mcu>/MDK-ARM/QBOOT.uvprojx` 的 Define 框）
 
-每个 `<mcu>` 工程含三个 Target：`QBOOT_CHECK` / `QBOOT_SEALED` / `QBOOT_SEC`，Define 与 3.1 一一对应。含逗号的 `{...}` 公钥列表在 Keil Define 里会被切坏，故公钥走"产品宏"那一层（见 `tools/README.md`），不在 Define 里直接写。
+每个 `<mcu>` 工程含三个 Target：`QBOOT_CHECK` / `QBOOT_SEALED` / `QBOOT_SECURED`，Define 与 3.1 一一对应。含逗号的 `{...}` 公钥列表在 Keil Define 里会被切坏，故公钥走自行添加的产品分支（`quilla-qboot-pubkey.h`，模板见 `tools/_keytest/README.md` §3.2），Define 里只放单个 token；仓库未预置该分支（见 `tools/README.md`）。
 
 ---
 
 ## 4. 串口升级（manifest 写入）
 
-无论哪种变体，APP 的安装 / 恢复都必须走 **QIAP 串口升级**（不要用纯 SWD 直烧 APP），因为 manifest（完整性摘要；SEALED/SEC 还含签名）由升级路径写入：
+无论哪种变体，APP 的安装 / 恢复都必须走 **QIAP 串口升级**（不要用纯 SWD 直烧 APP），因为 manifest（完整性摘要；SEALED/SECURED 还含签名）由升级路径写入：
 
-- **带钥匙**（QBOOT_SEALED / QBOOT_SEC）：END 仅 ACK，由 SIGN 帧验签通过后才写 manifest 并提交；
+- **带钥匙**（QBOOT_SEALED / QBOOT_SECURED）：END 仅 ACK，由 SIGN 帧验签通过后才写 manifest 并提交；
 - **无钥匙**（QBOOT_CHECK）：END 帧直接写完整性 manifest 并提交。
 
-对 SEALED / SEC 变体，这同时也是 §2.4 量产安全前提的一部分：除走 QIAP 外，量产还须确保不存在其它可绕过签名的直写 Flash 入口。
+对 SEALED / SECURED 变体，这同时也是 §2.4 量产安全前提的一部分：除走 QIAP 外，量产还须确保不存在其它可绕过签名的直写 Flash 入口。
 
 参考实现与命令见 `doc/quilla-host-updater-guide.md` §10。
 
@@ -156,7 +156,7 @@ SEALED 与 SEC 两个变体编译进的是**同一把钥匙**：默认是随仓�
 | **QBOOT_SEALED（SEALED 模式）** | **SL1 / SL2** 多数产品轮廓：安装时认证 + 每次启动完整性 + 锁 SWD(RDP) | 满足"启动前验证真实性/完整性"；前提是 RDP 开启 |
 | **SECURE 模式** | **SL3 / SL4** 或更严轮廓：要求**每次启动**重新验证，或威胁模型把"运行时妥协 / RDP 不足信"纳入范围 | 提供每电再认证，代价是每次上电 ~3.5 s（PY32F040xB，M0+/48 MHz，实测复位→APP banner；GD32F502VE 实测 < 500 ms） |
 
-**务实建议**：绝大多数终端产品用 **QBOOT_SEALED（SEALED 模式 + 开 RDP）** 即可满足 SL1/SL2，且开机快；仅当目标认证轮廓**明确要求每次启动重新验签**时才选 **QBOOT_SEC（SECURE 模式）**，并接受每次上电 ~3.5 s 的代价（PY32F040xB，M0+/48 MHz，实测；GD32F502VE 实测 < 500 ms）。无论哪种模式，**公钥必须编译进 QBOOT**（这是安全启动的标准做法），**私钥只留签名工位、绝不进固件 / 仓库**；产品构建可加 `QUILLA_PRODUCTION_BUILD`，若仍编译进仓库默认公钥，头文件会发编译警告提醒替换（不再以 `#error` 硬拦）。
+**务实建议**：绝大多数终端产品用 **QBOOT_SEALED（SEALED 模式 + 开 RDP）** 即可满足 SL1/SL2，且开机快；仅当目标认证轮廓**明确要求每次启动重新验签**时才选 **QBOOT_SECURED（SECURE 模式）**，并接受每次上电 ~3.5 s 的代价（PY32F040xB，M0+/48 MHz，实测；GD32F502VE 实测 < 500 ms）。无论哪种模式，**公钥必须编译进 QBOOT**（这是安全启动的标准做法），**私钥只留签名工位、绝不进固件 / 仓库**；产品构建可加 `QUILLA_PRODUCTION_BUILD`，若仍编译进仓库默认公钥，`quilla-qboot-secure.c` 会发一条编译警告提醒替换（不再以 `#error` 硬拦）。
 
 ---
 

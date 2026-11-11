@@ -15,7 +15,7 @@ Under `user/py32f040xb/MDK-ARM/` there are **two independent Keil project files*
 | Project file | Target name | Image | Load region (IROM1) | Macros | Output |
 | --- | --- | --- | --- | --- | --- |
 | `QAPP.uvprojx` | `QAPP` | Application firmware QAPP | `0x08007000 / 0x19000` | `USE_HAL_DRIVER,PY32F040xB,QAPP_BUILD` | `QAPP.axf/.hex` (`.\Output\`) |
-| `QBOOT.uvprojx` | `QBOOT_CHECK` / `QBOOT_SEALED` / `QBOOT_SEC` | bootloader | `0x08000000 / 0x6000` | See §7 (varies by variant) | `QBOOT_CHECK.axf/.hex`, etc. (`.\QBOOT_Output\`) |
+| `QBOOT.uvprojx` | `QBOOT_CHECK` / `QBOOT_SEALED` / `QBOOT_SECURED` | bootloader | `0x08000000 / 0x6000` | See §7 (varies by variant) | `QBOOT_CHECK.axf/.hex`, etc. (`.\QBOOT_Output\`) |
 
 Both use `IRAM1 = 0x20000000 / 0x4000` for RAM (QBOOT only uses less; RAM is not split further).
 Both projects enable `Use Memory Layout from Target Dialog` (`umfTarg=1`); the actual layout is determined by IROM1/IRAM1 on the Target page, and the `.sct` is an automatic artifact.
@@ -51,12 +51,12 @@ PY32F040xB: Flash 128 KB = `0x08000000 – 0x0801FFFF`, page size 256 B (512 pag
 | **Target** | Device | `PY32F040xB` | Same |
 | | IROM1 | `Start 0x08007000` `Size 0x19000` | `Start 0x08000000` `Size 0x6000` |
 | | IRAM1 | `Start 0x20000000` `Size 0x5000` | Same |
-| **C/C++** | Define | `USE_HAL_DRIVER,PY32F040xB,QAPP_BUILD` | `USE_HAL_DRIVER,PY32F040xB,QBOOT_BUILD` (per variant, also add `QUILLA_SB_BOOT_MODE` / `QUILLA_QBOOT_DEFAULT_KEY` / `QUILLA_PRODUCTION_BUILD` / `QUILLA_QBOOT_VARIANT_STR`, see §7) |
+| **C/C++** | Define | `USE_HAL_DRIVER,PY32F040xB,QAPP_BUILD` | `USE_HAL_DRIVER,PY32F040xB,QBOOT_BUILD` (per variant, also add `QUILLA_SB_BOOT_MODE` / `QUILLA_QBOOT_DEFAULT_KEY` / `QUILLA_PRODUCTION_BUILD`, see §7; the `QUILLA_QBOOT_VARIANT_STR` banner tag is derived from the mode, not a Define) |
 | | Optimization | Keep original setting | `-O2` (project default, microlib 15.4 KB / 24 KB); temporarily use `-O1` when size is tight |
 | | One ELF Section per Function | ✓ | ✓ (critical: otherwise the UART/Flash HAL enters the image in full, and it will not fit in 24K) |
 | **Linker** | Use Memory Layout from Target Dialog | ✓ | ✓ |
 | | Remove Unused Sections | ✓ | ✓ |
-| **Output** | Name of Executable | `QAPP` | `QBOOT_CHECK` / `QBOOT_SEALED` / `QBOOT_SEC` (by selected Target) |
+| **Output** | Name of Executable | `QAPP` | `QBOOT_CHECK` / `QBOOT_SEALED` / `QBOOT_SECURED` (by selected Target) |
 | | Create HEX File | ✓ | ✓ |
 
 > **"One ELF Section per Function + Remove Unused Sections" is a hard requirement for QBOOT**: the `py32f040_hal_uart.c` source file is about 120KB; without section removal it cannot possibly fit into 24KB.
@@ -67,7 +67,7 @@ The QBOOT partition budget is **24 KB** (`0x08000000`–`0x08005FFF` = 24,576 B)
 > must be checked, otherwise `-O1` and above immediately fail with `L6406E: No space in Execution Region ... ER_IROM1`.
 
 > **Link-Time Optimization (LTO) is enabled or disabled by the linked image size**: Whether LTO (armclang `--lto`, the `v6Lto` field in uvprojx) is on depends on the final QBOOT image size, not on a fixed setting.
-> - **GD32F502VE (Cortex-M33)**: armclang's LTO inlining cost model underestimates 32-bit Thumb-2, aggressively inlining the whole Ed25519 verification chain (e.g. `ge_add`, `verify_descriptor`). This inflates the cryptographic `QBOOT_SEALED` / `QBOOT_SEC` variants by ~47%, overflowing the 24 KB partition; disable LTO (`v6Lto = 0`) with `-O1`/`-O2` to fit within 24 KB. The non-cryptographic `QBOOT_CHECK` is unaffected and may keep LTO.
+> - **GD32F502VE (Cortex-M33)**: armclang's LTO inlining cost model underestimates 32-bit Thumb-2, aggressively inlining the whole Ed25519 verification chain (e.g. `ge_add`, `verify_descriptor`). This inflates the cryptographic `QBOOT_SEALED` / `QBOOT_SECURED` variants by ~47%, overflowing the 24 KB partition; disable LTO (`v6Lto = 0`) with `-O1`/`-O2` to fit within 24 KB. The non-cryptographic `QBOOT_CHECK` is unaffected and may keep LTO.
 > - **PY32F040xB (Cortex-M0+)**: the GNU toolchain does not use `-flto`; under Keil, LTO has limited inlining impact and can normally stay enabled.
 > - **Decision order**: build with the default configuration first; if the linker reports `L6406E` (insufficient space), adjust LTO and the optimization level before dropping non-essential commands (e.g. `stack`) or temporarily widening the partition.
 
@@ -200,9 +200,9 @@ APP-side source integration (`user/<mcu>/Src/`):
 > |------|----------|------|------|
 > | `QBOOT_CHECK` | `Makefile.qboot` | `./QBOOT_CHECK/QBOOT_CHECK.{elf,hex,bin}` | Integrity only, no key (`QUILLA_SB_BOOT_MODE=CHECK`) |
 > | `QBOOT_SEALED` | `Makefile.qboot.sealed` | `./QBOOT_SEALED/QBOOT_SEALED.{elf,hex,bin}` | Development state, default key (`QUILLA_QBOOT_DEFAULT_KEY` + `SEALED`) |
-> | `QBOOT_SEC` | `Makefile.qboot.sec` | `./QBOOT_SEC/QBOOT_SEC.{elf,hex,bin}` | Production state, SECURE mode verifies signature on every power-on (`QUILLA_QBOOT_DEFAULT_KEY` + `SECURE` + `QUILLA_PRODUCTION_BUILD`); same key as SEALED, see the makefile header comments for replacement |
+> | `QBOOT_SECURED` | `Makefile.qboot.secured` | `./QBOOT_SECURED/QBOOT_SECURED.{elf,hex,bin}` | Production state, SECURE mode verifies signature on every power-on (`QUILLA_QBOOT_DEFAULT_KEY` + `SECURE` + `QUILLA_PRODUCTION_BUILD`); same key as SEALED, see the makefile header comments for replacement |
 >
-> The three variants differ only in `C_DEFS` (macro list: see `doc/secure-boot.md` §3.1). SEALED and SEC compile in the **same default key**; before shipment both must replace it with their own public key (via `-DQUILLA_SECURE_BOOT_PUBKEY` or the product-macro layer — the branch template is in the header comments of `quilla-qboot-pubkey.h`; whether to replace is the customer's decision, and while still using the default key the header emits a compile warning); the `EIDE/` directories of both MCUs already provide these three makefiles.
+> The three variants differ only in `C_DEFS` (macro list: see `doc/secure-boot.md` §3.1). SEALED and SECURED compile in the **same default key**; before shipment both must replace it with their own public key (GNU: `-DQUILLA_SECURE_BOOT_PUBKEY={...}` in `C_DEFS`; Keil: add a product branch in `quilla-qboot-pubkey.h` and select its token — the branch is not pre-provided, copy the template from `tools/_keytest/README.md` §3.2; whether to replace is the customer's decision, and while still using the default key `quilla-qboot-secure.c` emits one compile warning); the `EIDE/` directories of both MCUs already provide these three makefiles.
 
 Macros and linking: the two Keil projects use `QAPP_BUILD`/`QBOOT_BUILD` respectively and set the corresponding IROM1; EIDE adds `QAPP_BUILD` + `py32f040xb_app.ld`; `Makefile` adds `-DQAPP_BUILD` + `py32f040xb_app.ld`; `Makefile.qboot` uses `-DQBOOT_BUILD` + `py32f040xb_qboot.ld`.
 

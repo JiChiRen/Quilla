@@ -115,8 +115,8 @@ jobs:
       - name: Build QBOOT (SEALED variant)
         run: make -C user/ch32v305rb/EIDE -f Makefile.qboot.sealed PREFIX=riscv-none-elf-
 
-      - name: Build QBOOT (SEC variant)
-        run: make -C user/ch32v305rb/EIDE -f Makefile.qboot.sec PREFIX=riscv-none-elf-
+      - name: Build QBOOT (SECURED variant)
+        run: make -C user/ch32v305rb/EIDE -f Makefile.qboot.secured PREFIX=riscv-none-elf-
 
       - name: Build QAPP
         run: make -C user/ch32v305rb/EIDE PREFIX=riscv-none-elf-

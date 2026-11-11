@@ -12,7 +12,7 @@
 /QAPP/
 /QBOOT_CHECK/
 /QBOOT_SEALED/
-/QBOOT_SEC/
+/QBOOT_SECURED/
 *.o
 *.d
 *.lst

@@ -4,7 +4,7 @@
 
 - **Status**: Active — on-target verified
 - **Scope**: building the QBOOT bootloader and QAPP application for the **GD32F502VE** (Cortex-M33) with the **GNU Arm Embedded toolchain** through the EIDE project under `user/gd32f502ve/EIDE/`. For the Keil/MDK projects see `doc/keil-qboot-app-build.md`; for the multi-MCU layout see `doc/port-layout.md`.
-- **Related**: `doc/secure-boot.md` (CHECK / SEALED / SEC variants and keys), `doc/upgrade-flow.md` (QIAP host upgrade).
+- **Related**: `doc/secure-boot.md` (CHECK / SEALED / SECURED variants and keys), `doc/upgrade-flow.md` (QIAP host upgrade).
 
 ---
 
@@ -55,10 +55,10 @@ USART0, **TX = PB6**, **RX = PB7**, `GPIO_AF_0`, 115200 8-N-1. RX is DMA-driven:
 make -f Makefile              # -> QAPP/QAPP.{elf,hex,bin}
 make -f Makefile.qboot        # -> QBOOT_CHECK   (SHA-256 integrity only)
 make -f Makefile.qboot.sealed # -> QBOOT_SEALED  (default secure variant)
-make -f Makefile.qboot.sec    # -> QBOOT_SEC     (Ed25519 on every boot, production)
+make -f Makefile.qboot.secured    # -> QBOOT_SECURED     (Ed25519 on every boot, production)
 ```
 
-The three QBOOT variants differ only in `C_DEFS` (`QUILLA_SB_BOOT_MODE` + `QUILLA_QBOOT_VARIANT_STR`; SEC also sets `QUILLA_PRODUCTION_BUILD`). SEALED and SEC ship with the **same default public key** — replace it with your own before production (see `doc/secure-boot.md` §3.1 and the header comments of `quilla-qboot-pubkey.h`).
+The three QBOOT variants differ only in `C_DEFS` (`QUILLA_SB_BOOT_MODE` plus the key define; SECURED also sets `QUILLA_PRODUCTION_BUILD`). The banner tag `QUILLA_QBOOT_VARIANT_STR` is derived from the mode in `quilla-qboot-secure.h`, not passed with `-D`. SEALED and SECURED ship with the **same default public key** — replace it with your own before production (see `doc/secure-boot.md` §3.1 and the header comments of `quilla-qboot-pubkey.h`).
 
 ## 6. Outputs and flashing
 
@@ -68,7 +68,7 @@ Each target produces `.elf`, `.hex` and `.bin` under its build directory. Flash 
 
 ## 7. Using the EIDE IDE
 
-Open `user/gd32f502ve/EIDE/` as an EIDE project (`.eide/eide.json`). EIDE builds the **QAPP** target only (the PY32F040xB/GD32 convention); the QBOOT and its variants are built with `make -f Makefile.qboot[.sealed|.sec]` from a terminal, or with the Keil `QBOOT.uvprojx`. The build tasks under `.vscode/tasks.json` mirror the Makefiles.
+Open `user/gd32f502ve/EIDE/` as an EIDE project (`.eide/eide.json`). EIDE builds the **QAPP** target only (the PY32F040xB/GD32 convention); the QBOOT and its variants are built with `make -f Makefile.qboot[.sealed|.secured]` from a terminal, or with the Keil `QBOOT.uvprojx`. The build tasks under `.vscode/tasks.json` mirror the Makefiles.
 
 ## 8. Measured sizes (development-process, not a delivery spec)
 
@@ -79,7 +79,7 @@ Measured with GNU Arm Embedded `arm-none-eabi-gcc` **13.2.1** (see §1). The QBO
 | QAPP | 17 908 | 152 | 11 496 |
 | QBOOT_CHECK | 21 236 | 116 | 18 344 |
 | QBOOT_SEALED | 21 336 | 116 | 18 344 |
-| QBOOT_SEC | 21 288 | 116 | 18 344 |
+| QBOOT_SECURED | 21 288 | 116 | 18 344 |
 
 > Sizes vary with toolchain and software version. Keil (armclang) produces a smaller QBOOT than GNU (see `doc/keil-qboot-app-build.md`); the figures above are GNU only. The QBOOT `bss` figure includes the linker-reserved 8 KiB stack and heap; the actual uninitialized data is much smaller.
 
@@ -87,7 +87,7 @@ Measured with GNU Arm Embedded `arm-none-eabi-gcc` **13.2.1** (see §1). The QBO
 
 A clean build prints a small number of warnings. They are expected and safe to ignore:
 
-- **Default public-key `#warning`** (SEALED / SEC only): *"QUILLA_QBOOT_DEFAULT_KEY is compiled in: this is the REPOSITORY DEFAULT public key … Replace it with your own keypair … before production shipment."* — an intentional reminder. The repository ships a real, working Ed25519 keypair so a fresh clone can build and boot immediately; its private key is publicly known (`tools/_keytest/private.hex`), so **you must provision your own key before shipping**. See `doc/secure-boot.md` §3.1.
+- **Default public-key `#warning`** (SEALED / SECURED only): *"QBOOT: repository default public key in use - provision your own keypair before shipment"* (SECURED with `QUILLA_PRODUCTION_BUILD` uses a production-worded variant) — emitted once per QBOOT build from `quilla-qboot-secure.c`, not from the header. An intentional reminder. The repository ships a real, working Ed25519 keypair so a fresh clone can build and boot immediately; its private key is publicly known (`tools/_keytest/private.hex`), so **you must provision your own key before shipping**. See `doc/secure-boot.md` §3.1.
 - **newlib `_write` / `_read` / `_close` / … "not implemented"**: the `nosys` syscall stubs; the firmware does not use a filesystem.
 - **`-Wmaybe-uninitialized` in the GigaDevice vendor RCU driver**: a vendor-code warning, not in Quilla code.
 

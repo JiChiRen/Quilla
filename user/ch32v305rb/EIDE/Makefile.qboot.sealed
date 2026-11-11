@@ -38,6 +38,7 @@ C_SOURCES =  \
 ../../../os/services/quilla-qboot/quilla-qiap.c \
 ../../../os/services/quilla-qboot/quilla-qboot-flag.c \
 ../../../os/services/quilla-qboot/quilla-qboot-meta.c \
+../../../os/services/quilla-qboot/quilla-qboot-otp.c \
 ../../../os/services/quilla-qboot/quilla-ed25519.c \
 ../../../os/services/quilla-qboot/quilla-qboot-secure.c \
 ../../../os/lib/sha256.c \
@@ -95,7 +96,6 @@ C_DEFS =  \
 -DCH32V30x_D8C\
 -DQBOOT_BUILD\
 -DQUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_SEALED\
--DQUILLA_QBOOT_VARIANT_STR=\"SEALED\"\
 -DQUILLA_QBOOT_DEFAULT_KEY\
 -DQUILLA_QBOOT_FLASH_BASE=0x00000000U\
 -DQUILLA_QBOOT_APP_START=0x00007000U\

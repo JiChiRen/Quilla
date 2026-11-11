@@ -338,7 +338,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>GD32F50X,GD32F502,QBOOT_BUILD,QUILLA_QBOOT_APP_START=0x08007000U,QUILLA_QBOOT_FLAG_ADDR=0x08006000U,QUILLA_QBOOT_PAGE_SIZE=2048U,QUILLA_QBOOT_RAM_START=0x20000000U,QUILLA_QBOOT_RAM_SIZE=0x00010000U,QUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_CHECK,QUILLA_QBOOT_VARIANT_STR=\"CHECK\"</Define>
+              <Define>GD32F50X,GD32F502,QBOOT_BUILD,QUILLA_QBOOT_APP_START=0x08007000U,QUILLA_QBOOT_PAGE_SIZE=2048U,QUILLA_QBOOT_RAM_START=0x20000000U,QUILLA_QBOOT_RAM_SIZE=0x00010000U,QUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_CHECK</Define>
               <Undefine></Undefine>
               <IncludePath>..;..\Inc;..\..\..\os;..\..\..\os\sys;..\..\..\os\lib;..\..\..\os\services\shell;..\..\..\os\services\quilla-qboot;..\..\..\arch\cpu\arm;..\..\..\arch\cpu\arm\gd32f502ve;..\..\..\arch\platform\arm;..\..\..\arch\platform\arm\gd32f502ve;..\..\..\arch\cpu\arm\CMSIS\Core\Include;..\..\..\arch\cpu\arm\CMSIS\Device\GigaDevice\GD32F50x\Include;..\..\..\arch\cpu\arm\vendor\GigaDevice\GD32F50x_Firmware_Library\GD32F50x_standard_peripheral\Include</IncludePath>
             </VariousControls>
@@ -548,6 +548,11 @@
               <FileName>quilla-qboot-meta.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\os\services\quilla-qboot\quilla-qboot-meta.c</FilePath>
+            </File>
+            <File>
+              <FileName>quilla-qboot-otp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\os\services\quilla-qboot\quilla-qboot-otp.c</FilePath>
             </File>
             <File>
               <FileName>quilla-ed25519.c</FileName>
@@ -935,7 +940,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>GD32F50X,GD32F502,QBOOT_BUILD,QUILLA_QBOOT_APP_START=0x08007000U,QUILLA_QBOOT_FLAG_ADDR=0x08006000U,QUILLA_QBOOT_PAGE_SIZE=2048U,QUILLA_QBOOT_RAM_START=0x20000000U,QUILLA_QBOOT_RAM_SIZE=0x00010000U,QUILLA_QBOOT_DEFAULT_KEY,QUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_SEALED,QUILLA_QBOOT_VARIANT_STR=\"SEALED\"</Define>
+              <Define>GD32F50X,GD32F502,QBOOT_BUILD,QUILLA_QBOOT_APP_START=0x08007000U,QUILLA_QBOOT_PAGE_SIZE=2048U,QUILLA_QBOOT_RAM_START=0x20000000U,QUILLA_QBOOT_RAM_SIZE=0x00010000U,QUILLA_QBOOT_DEFAULT_KEY,QUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_SEALED</Define>
               <Undefine></Undefine>
               <IncludePath>..;..\Inc;..\..\..\os;..\..\..\os\sys;..\..\..\os\lib;..\..\..\os\services\shell;..\..\..\os\services\quilla-qboot;..\..\..\arch\cpu\arm;..\..\..\arch\cpu\arm\gd32f502ve;..\..\..\arch\platform\arm;..\..\..\arch\platform\arm\gd32f502ve;..\..\..\arch\cpu\arm\CMSIS\Core\Include;..\..\..\arch\cpu\arm\CMSIS\Device\GigaDevice\GD32F50x\Include;..\..\..\arch\cpu\arm\vendor\GigaDevice\GD32F50x_Firmware_Library\GD32F50x_standard_peripheral\Include</IncludePath>
             </VariousControls>
@@ -1147,6 +1152,11 @@
               <FilePath>..\..\..\os\services\quilla-qboot\quilla-qboot-meta.c</FilePath>
             </File>
             <File>
+              <FileName>quilla-qboot-otp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\os\services\quilla-qboot\quilla-qboot-otp.c</FilePath>
+            </File>
+            <File>
               <FileName>quilla-ed25519.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\os\services\quilla-qboot\quilla-ed25519.c</FilePath>
@@ -1201,7 +1211,7 @@
       </Groups>
     </Target>
     <Target>
-      <TargetName>QBOOT_SEC</TargetName>
+      <TargetName>QBOOT_SECURED</TargetName>
       <ToolsetNumber>0x4</ToolsetNumber>
       <ToolsetName>ARM-ADS</ToolsetName>
       <pArmCC>6160000::V6.16::ARMCLANG</pArmCC>
@@ -1244,7 +1254,7 @@
             <InvalidFlash>1</InvalidFlash>
           </TargetStatus>
           <OutputDirectory>.\QBOOT_Output\</OutputDirectory>
-          <OutputName>QBOOT_SEC</OutputName>
+          <OutputName>QBOOT_SECURED</OutputName>
           <CreateExecutable>1</CreateExecutable>
           <CreateLib>0</CreateLib>
           <CreateHexFile>1</CreateHexFile>
@@ -1532,7 +1542,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>GD32F50X,GD32F502,QBOOT_BUILD,QUILLA_QBOOT_DEFAULT_KEY,QUILLA_QBOOT_APP_START=0x08007000U,QUILLA_QBOOT_FLAG_ADDR=0x08006000U,QUILLA_QBOOT_PAGE_SIZE=2048U,QUILLA_QBOOT_RAM_START=0x20000000U,QUILLA_QBOOT_RAM_SIZE=0x00010000U,QUILLA_PRODUCTION_BUILD,QUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_SECURE,QUILLA_QBOOT_VARIANT_STR=\"SEC\"</Define>
+              <Define>GD32F50X,GD32F502,QBOOT_BUILD,QUILLA_QBOOT_DEFAULT_KEY,QUILLA_QBOOT_APP_START=0x08007000U,QUILLA_QBOOT_PAGE_SIZE=2048U,QUILLA_QBOOT_RAM_START=0x20000000U,QUILLA_QBOOT_RAM_SIZE=0x00010000U,QUILLA_PRODUCTION_BUILD,QUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_SECURE</Define>
               <Undefine></Undefine>
               <IncludePath>..;..\Inc;..\..\..\os;..\..\..\os\sys;..\..\..\os\lib;..\..\..\os\services\shell;..\..\..\os\services\quilla-qboot;..\..\..\arch\cpu\arm;..\..\..\arch\cpu\arm\gd32f502ve;..\..\..\arch\platform\arm;..\..\..\arch\platform\arm\gd32f502ve;..\..\..\arch\cpu\arm\CMSIS\Core\Include;..\..\..\arch\cpu\arm\CMSIS\Device\GigaDevice\GD32F50x\Include;..\..\..\arch\cpu\arm\vendor\GigaDevice\GD32F50x_Firmware_Library\GD32F50x_standard_peripheral\Include</IncludePath>
             </VariousControls>
@@ -1742,6 +1752,11 @@
               <FileName>quilla-qboot-meta.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\..\os\services\quilla-qboot\quilla-qboot-meta.c</FilePath>
+            </File>
+            <File>
+              <FileName>quilla-qboot-otp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\os\services\quilla-qboot\quilla-qboot-otp.c</FilePath>
             </File>
             <File>
               <FileName>quilla-ed25519.c</FileName>

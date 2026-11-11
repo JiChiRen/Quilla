@@ -107,7 +107,7 @@ Add `user/<mcu>/EIDE/Makefile.qboot` (`TARGET = QBOOT`) and the QBOOT linker scr
 - **Macros**: `-DUSE_HAL_DRIVER -D<device> -DQBOOT_BUILD`; **optimization `-Os`**; the QBOOT linker script.
 - **Excluded (APP-specific, strictly forbidden in QBOOT)**: network stack, display, SPI DMA, CoAP/SNMP, RPL, TSCH, CTIMER/STIMER, AUTOSTART, and the LPTIM/low-power/RTIMER chain (`rtimer-arch.c`, `hal_lptim.c`, `lpm.c`).
 
-> QBOOT size budget is 24 KB. The closure is complete per static symbol verification. If the `-Os` link result exceeds 24 KB, cut in this order: `assert.c` (if unreferenced, `--gc-sections` already discards it); removing `clock.c`'s calls to `etimer` (requires modifying `clock.c`, a large effort, not recommended); if still over, move `APP_START` back per §3 (sacrificing APP space). On GD32F502VE (M33) note that armclang LTO inlines the Ed25519 verification chain and inflates SEALED/SEC past the budget — disable LTO (`v6Lto=0`); see `doc/keil-qboot-app-build.md`.
+> QBOOT size budget is 24 KB. The closure is complete per static symbol verification. If the `-Os` link result exceeds 24 KB, cut in this order: `assert.c` (if unreferenced, `--gc-sections` already discards it); removing `clock.c`'s calls to `etimer` (requires modifying `clock.c`, a large effort, not recommended); if still over, move `APP_START` back per §3 (sacrificing APP space). On GD32F502VE (M33) note that armclang LTO inlines the Ed25519 verification chain and inflates SEALED/SECURED past the budget — disable LTO (`v6Lto=0`); see `doc/keil-qboot-app-build.md`.
 
 ---
 
@@ -205,7 +205,7 @@ In the shell, **the host must first send the text command `qiap` (terminated by 
 > ⚠️ Any binary frame sent before the `qiap` command (including ENTER/DATA/END) is parsed as a shell command or silently discarded, and the upgrade cannot start. Be sure to type `qiap` first.
 > Typical host sequence (entering QBOOT via `swqboot`): `swqboot` (inside APP, sets the QBOOT flag and resets) → reset into the QBOOT shell → send `qiap` → send ENTER/DATA/END → on success, reset into the new APP.
 
-Link: reuses the existing shell UART (PY32F040xB: USART2 / PA2/PA3 / DMA; GD32F502VE: USART0 / PB6/PB7 / DMA0 CH4 + IDLE framing; both 115200-N-8-1, same as APP).
+Link: reuses the existing shell UART (PY32F040xB: USART2 / PA2/PA3 / DMA; GD32F502VE: USART0 / PB6/PB7 / DMA0 CH4 + IDLE framing; CH32V305RB: USART2 / PA2/PA3 / DMA1 CH6 + IDLE framing; all 115200-N-8-1, same as APP).
 
 **The protocol is binary frames**, non-interfering with the shell's line parsing: after the `qiap` command switches modes, the UART byte stream is fed directly to the `quilla_qiap_feed()` state machine (`quilla-qiap.c`) and no longer goes through shell line parsing.
 
@@ -338,11 +338,11 @@ version < anti-rollback lower bound       → ERR_ROLLBACK (refuse to jump)
 all checks passed                         → raise the lower bound to version, return OK, jump to APP
 ```
 
-When refusing to jump, QBOOT **does not reset and does not jump to APP**; after printing the reason it falls to the interactive shell, where `qiap` remains reachable — the device stays rescuable rather than bricked.
+When refusing to jump, QBOOT **does not reset and does not jump to APP**; after printing the reason it enters the interactive shell, where the `qiap` command remains reachable — the device stays recoverable rather than unbootable.
 
 ### Anti-Rollback Lower Bound
 
-The lower bound is a field of the wear-levelled META record (QMTL meta block, `QUILLA_META_OFF_FLOOR`), only ever increasing. Both a successful upgrade and a passed boot verification raise the lower bound to the current version. The version is **part of the signed firmware image** (baked at `QUILLA_QBOOT_APP_START + 0x400`, covered by the signature); it is never accepted from the host, and QBOOT only ratchets its floor up to it, so a downgraded (signed) image carrying a lower firmware version is refused. A failure to raise it is handled as "best effort": **an image already accepted by the signature must not brick the device just because the lower bound cannot be written**; the signature is the primary gate. (The APP also carries a non-cryptographic self-check of the region, `QUILLA_APP_SECVER_SELFCHECK` — obfuscation, not a security control; see `doc/secure-boot.md` §1.1.)
+The lower bound is a field of the wear-levelled META record (QMTL meta block, `QUILLA_META_OFF_FLOOR`), only ever increasing. Both a successful upgrade and a passed boot verification raise the lower bound to the current version. The version is **part of the signed firmware image** (baked at `QUILLA_QBOOT_APP_START + 0x400`, covered by the signature); it is never accepted from the host, and QBOOT only ratchets its floor up to it, so a downgraded (signed) image carrying a lower firmware version is refused. A failure to raise it is handled as best-effort: **an image already accepted by the signature must not become unbootable merely because the lower bound cannot be written**; the signature check is the primary gate. (The APP also carries a non-cryptographic self-check of the region, `QUILLA_APP_SECVER_SELFCHECK` — obfuscation, not a security control; see `doc/secure-boot.md` §1.1.)
 
 ### Keys and Tools
 
@@ -350,10 +350,13 @@ The lower bound is a field of the wear-levelled META record (QMTL meta block, `Q
 python tools/quilla_ed25519_sign.py keygen --dir keys
 #   -> keys/private.hex (kept on the production line, never leaked)
 #   -> keys/public.hex (flashed into QBOOT)
-#   and prints:  -DQUILLA_SECURE_BOOT_PUBKEY={0x..,...,0x..}
+#   and prints toolchain-specific provisioning instructions
 ```
 
-Add this macro to the QBOOT build (Keil `Define` / `Makefile.qboot` `C_DEFS`) to enable secure boot.
+Follow the printed instructions: GNU adds `-DQUILLA_SECURE_BOOT_PUBKEY={...}`
+to `C_DEFS`; Keil adds a product branch in `quilla-qboot-pubkey.h` and selects
+its token in the Define box (the comma-separated Define field cannot carry a
+`{...}` list).
 The private key stays only on the production line; when flashing:
 
 ```bash

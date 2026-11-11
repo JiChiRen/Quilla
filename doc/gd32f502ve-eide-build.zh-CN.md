@@ -4,7 +4,7 @@
 
 - **状态**：Active —— 已上板实测
 - **范围**：用 **GNU Arm Embedded 工具链** 通过 `user/gd32f502ve/EIDE/` 下的 EIDE 工程构建 **GD32F502VE**（Cortex-M33）的 QBOOT bootloader 与 QAPP 应用。Keil/MDK 工程见 `doc/keil-qboot-app-build.md`；多 MCU 布局见 `doc/port-layout.md`。
-- **相关**：`doc/secure-boot.md`（CHECK / SEALED / SEC 变体与密钥）、`doc/upgrade-flow.md`（QIAP 主机升级）。
+- **相关**：`doc/secure-boot.md`（CHECK / SEALED / SECURED 变体与密钥）、`doc/upgrade-flow.md`（QIAP 主机升级）。
 
 ---
 
@@ -55,10 +55,10 @@ USART0，**TX = PB6**，**RX = PB7**，`GPIO_AF_0`，115200 8-N-1。RX 由 DMA �
 make -f Makefile              # -> QAPP/QAPP.{elf,hex,bin}
 make -f Makefile.qboot        # -> QBOOT_CHECK   （仅 SHA-256 完整性）
 make -f Makefile.qboot.sealed # -> QBOOT_SEALED  （默认安全变体）
-make -f Makefile.qboot.sec    # -> QBOOT_SEC     （每次启动 Ed25519 验签，量产）
+make -f Makefile.qboot.secured    # -> QBOOT_SECURED     （每次启动 Ed25519 验签，量产）
 ```
 
-三个 QBOOT 变体仅在 `C_DEFS` 上不同（`QUILLA_SB_BOOT_MODE` + `QUILLA_QBOOT_VARIANT_STR`；SEC 另设 `QUILLA_PRODUCTION_BUILD`）。SEALED 与 SEC 出厂编译进**同一把默认公钥**——量产前请替换为你自己的（见 `doc/secure-boot.md` §3.1 与 `quilla-qboot-pubkey.h` 头部注释）。
+三个 QBOOT 变体仅在 `C_DEFS` 上不同（`QUILLA_SB_BOOT_MODE` 及钥匙相关 define；SECURED 另设 `QUILLA_PRODUCTION_BUILD`）。banner 标签 `QUILLA_QBOOT_VARIANT_STR` 由该模式在 `quilla-qboot-secure.h` 内派生，不以 `-D` 传入。SEALED 与 SECURED 出厂编译进**同一把默认公钥**——量产前请替换为你自己的（见 `doc/secure-boot.md` §3.1 与 `quilla-qboot-pubkey.h` 头部注释）。
 
 ## 6. 产物与烧录
 
@@ -68,7 +68,7 @@ make -f Makefile.qboot.sec    # -> QBOOT_SEC     （每次启动 Ed25519 验签�
 
 ## 7. 使用 EIDE IDE
 
-将 `user/gd32f502ve/EIDE/` 作为 EIDE 工程打开（`.eide/eide.json`）。EIDE 仅构建 **QAPP** 目标（PY32F040xB/GD32 约定）；QBOOT 及其变体用 `make -f Makefile.qboot[.sealed|.sec]` 在终端构建，或用 Keil 的 `QBOOT.uvprojx`。`.vscode/tasks.json` 下的构建任务镜像各 Makefile。
+将 `user/gd32f502ve/EIDE/` 作为 EIDE 工程打开（`.eide/eide.json`）。EIDE 仅构建 **QAPP** 目标（PY32F040xB/GD32 约定）；QBOOT 及其变体用 `make -f Makefile.qboot[.sealed|.secured]` 在终端构建，或用 Keil 的 `QBOOT.uvprojx`。`.vscode/tasks.json` 下的构建任务镜像各 Makefile。
 
 ## 8. 实测尺寸（开发过程数据，非交付规格）
 
@@ -79,7 +79,7 @@ make -f Makefile.qboot.sec    # -> QBOOT_SEC     （每次启动 Ed25519 验签�
 | QAPP | 17 908 | 152 | 11 496 |
 | QBOOT_CHECK | 21 236 | 116 | 18 344 |
 | QBOOT_SEALED | 21 336 | 116 | 18 344 |
-| QBOOT_SEC | 21 288 | 116 | 18 344 |
+| QBOOT_SECURED | 21 288 | 116 | 18 344 |
 
 > 数字随工具链与软件版本变化。Keil（armclang）产出的 QBOOT 比 GNU 小（见 `doc/keil-qboot-app-build.md`）；上表仅为 GNU 数据。QBOOT 的 `bss` 数字包含链接脚本预留的 8 KiB 栈与堆，实际未初始化数据远小于此。
 
@@ -87,7 +87,7 @@ make -f Makefile.qboot.sec    # -> QBOOT_SEC     （每次启动 Ed25519 验签�
 
 干净构建会打印少量警告，均为预期且可忽略：
 
-- **默认公钥 `#warning`**（仅 SEALED / SEC）：*"QUILLA_QBOOT_DEFAULT_KEY is compiled in: this is the REPOSITORY DEFAULT public key … 量产前请替换为你自己的密钥对……"* —— 故意的提醒。仓库随附一把真实可用的 Ed25519 密钥对，使全新 clone 即可构建并启动；其私钥公开已知（`tools/_keytest/private.hex`），故**量产前必须自备密钥**。见 `doc/secure-boot.md` §3.1。
+- **默认公钥 `#warning`**（仅 SEALED / SECURED）：*"QBOOT: repository default public key in use - provision your own keypair before shipment"*（定义了 `QUILLA_PRODUCTION_BUILD` 的 SECURED 变体措辞更醒目）——每个 QBOOT 构建只从 `quilla-qboot-secure.c` 发出一条，不再由头文件重复发出。属故意的提醒。仓库随附一把真实可用的 Ed25519 密钥对，使全新 clone 即可构建并启动；其私钥公开已知（`tools/_keytest/private.hex`），故**量产前必须自备密钥**。见 `doc/secure-boot.md` §3.1。
 - **newlib `_write` / `_read` / `_close` … "not implemented"**：`nosys` 系统调用桩；固件不使用文件系统。
 - **GigaDevice 厂商 RCU 驱动的 `-Wmaybe-uninitialized`**：厂商代码警告，不在 Quilla 代码中。
 

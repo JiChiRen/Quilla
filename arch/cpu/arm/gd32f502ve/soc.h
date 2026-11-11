@@ -66,6 +66,38 @@
 #define SOC_FLASH_END          0x0807FFFFUL  /**< GD32F502VE: 512 KiB flash */
 /** @} */
 /*----------------------------------------------------------------------------*/
+/** \name OTP (one-time-programmable) geometry
+ * @{
+ */
+/** \brief Whether this MCU provides a genuine securted-programmable region.
+ *
+ *  This is a pure MCU hardware property, the single source for
+ *  QUILLA_QBOOT_SECPROG_AVAILABLE (see os/services/quilla-qboot/
+ *  quilla-qboot-hal.h). Every Quilla MCU port MUST define it in its
+ *  arch/cpu/<arch>/<mcu>/soc.h: 1 = the manual documents an OTP area whose
+ *  cells can be programmed once and never erased; 0 = no such area. The boot
+ *  boot derives the hardware-counter feature level from this flag and the
+ *  WRP availability flag (see QUILLA_QBOOT_HW_COUNTER_LEVEL in
+ *  quilla-qboot-secure.h).
+ *
+ *  GD32F502VE: GD32F50x user manual, FMC chapter. OTP2 data block,
+ *  256 one-time-programmable bytes at 0x1FF20000. Byte programming is
+ *  supported (fmc_otp_byte_program); each byte cell accepts exactly ONE
+ *  program operation and can never be erased, which is exactly the property
+ *  the hardware monotonic counter needs.
+ */
+#define SOC_OTP_AVAILABLE      1UL
+#define SOC_OTP_BASE           0x1FF20000UL  /**< OTP2 data block base */
+#define SOC_OTP_SIZE           256UL         /**< OTP2 data block, 256 bytes */
+
+/**
+ * Counter cell granularity for the hardware monotonic counter, in bytes.
+ * GD32 OTP cells are byte-granular and accept exactly one program operation,
+ * so one cell is one byte.
+ */
+#define SOC_OTP_CELL_SIZE      1UL
+/** @} */
+/*----------------------------------------------------------------------------*/
 /** \name SoC functions
  * @{
  */

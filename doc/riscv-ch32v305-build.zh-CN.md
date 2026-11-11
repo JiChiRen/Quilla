@@ -77,10 +77,10 @@ USART2，**TX = PA2（GPIO16）**，**RX = PA3（GPIO17）**，115200 8-N-1。RX
 make -f Makefile              # -> QAPP/QAPP.{elf,hex,bin}
 make -f Makefile.qboot        # -> QBOOT_CHECK  （仅 SHA-256 完整性）
 make -f Makefile.qboot.sealed # -> QBOOT_SEALED （默认安全变体）
-make -f Makefile.qboot.sec    # -> QBOOT_SEC     （每次 Ed25519 验签）
+make -f Makefile.qboot.secured    # -> QBOOT_SECURED     （每次 Ed25519 验签）
 ```
 
-`QUILLA_QBOOT_VARIANT_STR` / `QUILLA_SB_BOOT_MODE` 由各 Makefile 设置（CHECK / SEALED / SEC），与 GD32 变体一致。
+`QUILLA_SB_BOOT_MODE` 由各 Makefile 设置（CHECK / SEALED / SECURED），与 GD32 变体一致；banner 标签 `QUILLA_QBOOT_VARIANT_STR` 由它在 `quilla-qboot-secure.h` 内派生。
 
 ## 7. 实测尺寸（开发过程数据，非交付规格）
 
@@ -89,11 +89,11 @@ make -f Makefile.qboot.sec    # -> QBOOT_SEC     （每次 Ed25519 验签）
 | QAPP | 18 453 | 192 | 10 120 |
 | QBOOT_CHECK | 23 004 | 160 | 5 456 |
 | QBOOT_SEALED | 23 108 | 160 | 5 456 |
-| QBOOT_SEC | 23 060 | 160 | 5 456 |
+| QBOOT_SECURED | 23 060 | 160 | 5 456 |
 
 三个 QBOOT 变体均入 24 KiB 区（约 1.4 KiB 余量，与吃紧的 GD32 SEALED 相当）。数字随工具链/软件版本变化。
 
-> **编译警告**：干净构建本身无警告。SEALED 与 SEC 变体另会触发故意的「默认公钥」`#warning`（见 `doc/gd32f502ve-eide-build.md` §9）——提醒量产前将仓库默认 Ed25519 密钥替换为你自己的，属预期。
+> **编译警告**：干净构建本身无警告。SEALED 与 SECURED 变体另会触发故意的「默认公钥」`#warning`（见 `doc/gd32f502ve-eide-build.md` §9）——提醒量产前将仓库默认 Ed25519 密钥替换为你自己的，属预期。
 
 ## 8. 需上板验证的 bring-up 项
 

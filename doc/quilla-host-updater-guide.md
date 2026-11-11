@@ -220,7 +220,7 @@ The upgrade flow is identical for the three QBOOT variants; the only differences
 |----------|---------|------|
 | **QBOOT_CHECK** | Do not pass | Keyless; the END frame writes the integrity manifest and commits directly. **Never pass `--key`** — after the device receives END it has already committed and reset, so a subsequent SIGN frame will time out and falsely report failure. |
 | **QBOOT_SEALED** | `tools/_keytest/private.hex` (default private key) | For R&D / integration; the default public key is already compiled into QBOOT. |
-| **QBOOT_SEC** | Same one as SEALED — the default private key `tools/_keytest/private.hex`, or your own private key after replacement | Must match the public key compiled into QBOOT (default public key ⇔ default private key; own public key ⇔ own private key), otherwise SIGN verification fails and the upgrade is rejected. |
+| **QBOOT_SECURED** | Same one as SEALED — the default private key `tools/_keytest/private.hex`, or your own private key after replacement | Must match the public key compiled into QBOOT (default public key ⇔ default private key; own public key ⇔ own private key), otherwise SIGN verification fails and the upgrade is rejected. |
 
 Examples:
 
@@ -231,7 +231,7 @@ python tools/quilla_host_updater.py COM3 app.bin
 # QBOOT_SEALED (R&D state, default (public) key)
 python tools/quilla_host_updater.py COM3 app.bin --key tools/_keytest/private.hex
 
-# QBOOT_SEC (mass-production state, SECURE mode verifies the signature on every power cycle; the key is the same one as SEALED's)
+# QBOOT_SECURED (mass-production state, SECURE mode verifies the signature on every power cycle; the key is the same one as SEALED's)
 python tools/quilla_host_updater.py COM3 app.bin --key keys/product_priv.hex
 ```
 

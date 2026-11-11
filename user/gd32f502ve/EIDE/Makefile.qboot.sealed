@@ -9,12 +9,13 @@
 # Difference vs Makefile.qboot (the CHECK / integrity-only build):
 #   -DQBOOT_BUILD  ->  -DQBOOT_BUILD -DQUILLA_QBOOT_DEFAULT_KEY
 #                       -DQUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_SEALED
-#                       -DQUILLA_QBOOT_VARIANT_STR="SEALED"
+#                       (the [SEALED] banner tag is derived from this mode,
+#                        not passed with -D)
 # (QUILLA_SB_BOOT_MODE defaults to SEALED already, so the explicit define is
 #  redundant but kept 1:1 with the Keil target for clarity.)
 #
 # DEVELOPMENT ONLY: this carries the in-repo TEST key (tools/_keytest). Do NOT
-# ship it. For production use Makefile.qboot.sec (QBOOT_SEC) with a real key.
+# ship it. For production use Makefile.qboot.secured (QBOOT_SECURED) with a real key.
 #
 # Build:  make -f Makefile.qboot.sealed  (produces ./QBOOT_SEALED/QBOOT_SEALED.{elf,hex,bin})
 ##########################################################################################################################
@@ -54,6 +55,7 @@ C_SOURCES =  \
 ../../../os/services/quilla-qboot/quilla-qiap.c \
 ../../../os/services/quilla-qboot/quilla-qboot-flag.c \
 ../../../os/services/quilla-qboot/quilla-qboot-meta.c \
+../../../os/services/quilla-qboot/quilla-qboot-otp.c \
 ../../../os/services/quilla-qboot/quilla-ed25519.c \
 ../../../os/services/quilla-qboot/quilla-qboot-secure.c \
 ../../../os/lib/sha256.c \
@@ -122,9 +124,7 @@ C_DEFS =  \
 -DQBOOT_BUILD\
 -DQUILLA_QBOOT_DEFAULT_KEY\
 -DQUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_SEALED\
--DQUILLA_QBOOT_VARIANT_STR=\"SEALED\"\
 -DQUILLA_QBOOT_APP_START=0x08007000U\
--DQUILLA_QBOOT_FLAG_ADDR=0x08006000U\
 -DQUILLA_QBOOT_PAGE_SIZE=2048U\
 -DQUILLA_QBOOT_RAM_START=0x20000000U\
 -DQUILLA_QBOOT_RAM_SIZE=0x00010000U

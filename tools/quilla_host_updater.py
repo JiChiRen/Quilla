@@ -27,8 +27,9 @@ Strictly mirrors the firmware-side protocol (see doc/qboot-app-architecture.md Â
     against its anti-rollback floor, so neither the host nor a malicious build
     can forge a lower version. Generate keys offline with quilla_ed25519_sign.py:
         python quilla_ed25519_sign.py keygen --dir keys
-    Flash the public key into QBOOT via -DQUILLA_SECURE_BOOT_PUBKEY={...}; keep
-    the private key on the production line.
+    Bake the public key into QBOOT (GNU: -DQUILLA_SECURE_BOOT_PUBKEY={...};
+    Keil: a product branch in quilla-qboot-pubkey.h, template in
+    tools/_keytest/README.md section 3.2); keep the private key on the line.
 
   Entering upgrade mode has two sources (auto-detected by this tool):
     1) Device flag==QIAP (leftover from an interrupted upgrade): prints

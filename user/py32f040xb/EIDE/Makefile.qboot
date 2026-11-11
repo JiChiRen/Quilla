@@ -57,6 +57,7 @@ C_SOURCES =  \
 ../../../os/services/quilla-qboot/quilla-qiap.c \
 ../../../os/services/quilla-qboot/quilla-qboot-flag.c \
 ../../../os/services/quilla-qboot/quilla-qboot-meta.c \
+../../../os/services/quilla-qboot/quilla-qboot-otp.c \
 ../../../os/services/quilla-qboot/quilla-ed25519.c \
 ../../../os/services/quilla-qboot/quilla-qboot-secure.c \
 ../../../os/lib/sha256.c \
@@ -137,8 +138,7 @@ C_DEFS =  \
 -DUSE_HAL_DRIVER\
 -DPY32F040xB\
 -DQBOOT_BUILD\
--DQUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_CHECK\
--DQUILLA_QBOOT_VARIANT_STR=\"CHECK\"
+-DQUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_CHECK
 
 # AS includes
 AS_INCLUDES =

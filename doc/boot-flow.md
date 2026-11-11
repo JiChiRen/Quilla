@@ -281,11 +281,11 @@ Measured QBOOT footprint against the 24 KB budget:
 | Keil `-O0` | Overflow | — |
 | GNU `-Os`, QBOOT_CHECK — measured 2026-11-03 | 21,208 B | ~14% |
 | GNU `-Os`, QBOOT_SEALED — measured 2026-11-03 | 21,308 B | ~13% |
-| GNU `-Os`, QBOOT_SEC — measured 2026-11-03 | 21,260 B | ~13% |
+| GNU `-Os`, QBOOT_SECURED — measured 2026-11-03 | 21,260 B | ~13% |
 
 `-O0` overflows; be careful when single-stepping QBOOT. Enabling `KERN_CONF_STACK_SHELL=1` adds about 456 B to the GNU build (2026-10-11 measurement).
 
-Version note: the 2026-11-03 GNU figures are per-variant (CHECK/SEALED/SEC) on `arm-none-eabi-gcc` 13.2.1 after the CR-0042 entry single-sourcing and the CR-0043 shell formatter change (which removed the newlib printf/malloc family, about -1.6 K per image). They are larger than the single 2026-10-11 figure (19,412 B) mainly because the META dual-slot store and anti-rollback features landed in between — the footprint grew with features, then shrank with CR-0043. CH32V305 measured with the WCH GCC12 toolchain: 20,987–21,095 B text (all three variants).
+Version note: the 2026-11-03 GNU figures are per-variant (CHECK/SEALED/SECURED) on `arm-none-eabi-gcc` 13.2.1 after the CR-0042 entry single-sourcing and the CR-0043 shell formatter change (which removed the newlib printf/malloc family, about -1.6 K per image). They are larger than the single 2026-10-11 figure (19,412 B) mainly because the META dual-slot store and anti-rollback features landed in between — the footprint grew with features, then shrank with CR-0043. CH32V305 measured with the WCH GCC12 toolchain: 20,987–21,095 B text (all three variants).
 
 ---
 

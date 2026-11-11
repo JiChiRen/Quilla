@@ -15,7 +15,7 @@
 | 工程文件 | Target 名 | 镜像 | 链接区域（IROM1） | 宏 | 产物 |
 | --- | --- | --- | --- | --- | --- |
 | `QAPP.uvprojx` | `QAPP` | 业务固件 QAPP | `0x08007000 / 0x19000` | `USE_HAL_DRIVER,PY32F040xB,QAPP_BUILD` | `QAPP.axf/.hex`（`.\Output\`） |
-| `QBOOT.uvprojx` | `QBOOT_CHECK` / `QBOOT_SEALED` / `QBOOT_SEC` | bootloader | `0x08000000 / 0x6000` | 见 §7（按变体不同） | `QBOOT_CHECK.axf/.hex` 等（`.\QBOOT_Output\`） |
+| `QBOOT.uvprojx` | `QBOOT_CHECK` / `QBOOT_SEALED` / `QBOOT_SECURED` | bootloader | `0x08000000 / 0x6000` | 见 §7（按变体不同） | `QBOOT_CHECK.axf/.hex` 等（`.\QBOOT_Output\`） |
 
 两者 RAM 均为 `IRAM1 = 0x20000000 / 0x4000`（QBOOT 只少用、不另分 RAM）。
 两个工程都启用 `Use Memory Layout from Target Dialog`（`umfTarg=1`），实际布局由 Target 页的 IROM1/IRAM1 决定，`.sct` 是自动产物。
@@ -52,12 +52,12 @@ Flash 128KB = `0x08000000 – 0x0801FFFF`，页 256B（共 512 页）。
 | **Target** | Device | `PY32F040xB` | 同左 |
 | | IROM1 | `Start 0x08007000` `Size 0x19000` | `Start 0x08000000` `Size 0x6000` |
 | | IRAM1 | `Start 0x20000000` `Size 0x5000` | 同左 |
-| **C/C++** | Define | `USE_HAL_DRIVER,PY32F040xB,QAPP_BUILD` | `USE_HAL_DRIVER,PY32F040xB,QBOOT_BUILD`（按变体追加 `QUILLA_SB_BOOT_MODE` / `QUILLA_QBOOT_DEFAULT_KEY` / `QUILLA_PRODUCTION_BUILD` / `QUILLA_QBOOT_VARIANT_STR`，见 §7） |
+| **C/C++** | Define | `USE_HAL_DRIVER,PY32F040xB,QAPP_BUILD` | `USE_HAL_DRIVER,PY32F040xB,QBOOT_BUILD`（按变体追加 `QUILLA_SB_BOOT_MODE` / `QUILLA_QBOOT_DEFAULT_KEY` / `QUILLA_PRODUCTION_BUILD`，见 §7；`QUILLA_QBOOT_VARIANT_STR` banner 标签由模式派生，不进 Define） |
 | | Optimization | 沿用原设置 | `-O2`（工程默认，microlib 15.4 KB / 24 KB）；体积偏紧时可临时 `-O1` |
 | | One ELF Section per Function | ✓ | ✓（关键：否则 UART/Flash HAL 全量进镜像，24K 也装不下） |
 | **Linker** | Use Memory Layout from Target Dialog | ✓ | ✓ |
 | | 回收未用段（Remove Unused Sections） | ✓ | ✓ |
-| **Output** | Name of Executable | `QAPP` | `QBOOT_CHECK` / `QBOOT_SEALED` / `QBOOT_SEC`（按所选 Target） |
+| **Output** | Name of Executable | `QAPP` | `QBOOT_CHECK` / `QBOOT_SEALED` / `QBOOT_SECURED`（按所选 Target） |
 | | Create HEX File | ✓ | ✓ |
 
 > **"每函数一段 + 回收未用段"对 QBOOT 是硬需求**：`py32f040_hal_uart.c` 源文件约 120KB，不做段回收不可能塞进 24KB。
@@ -68,7 +68,7 @@ QBOOT 分区预算为 **24 KB**（`0x08000000`–`0x08005FFF` = 24,576 B），�
 > 必须勾上，否则 `-O1` 及以上直接 `L6406E: No space in Execution Region ... ER_IROM1`。
 
 > **Link-Time Optimization（LTO）按链接后实际体积决定开关**：LTO（armclang `--lto`，uvprojx 的 `v6Lto`）是否开启取决于 QBOOT 最终镜像体积，而非固定开启。
-> - **GD32F502VE（Cortex-M33）**：armclang 的 LTO 内联成本模型对 32 位 Thumb-2 估值偏低，会激进内联整条 Ed25519 验签链（如 `ge_add`、`verify_descriptor`），使含密码学的 `QBOOT_SEALED` / `QBOOT_SEC` 变体体积膨胀约 47%，超出 24 KB 分区；此时应关闭 LTO（`v6Lto = 0`）并配合 `-O1`/`-O2`，即可落回 24 KB 内。不含密码学的 `QBOOT_CHECK` 不受影响，可保留 LTO。
+> - **GD32F502VE（Cortex-M33）**：armclang 的 LTO 内联成本模型对 32 位 Thumb-2 估值偏低，会激进内联整条 Ed25519 验签链（如 `ge_add`、`verify_descriptor`），使含密码学的 `QBOOT_SEALED` / `QBOOT_SECURED` 变体体积膨胀约 47%，超出 24 KB 分区；此时应关闭 LTO（`v6Lto = 0`）并配合 `-O1`/`-O2`，即可落回 24 KB 内。不含密码学的 `QBOOT_CHECK` 不受影响，可保留 LTO。
 > - **PY32F040xB（Cortex-M0+）**：GNU 工具链不使用 `-flto`，Keil 构建下 LTO 对内联影响有限，通常可保持开启。
 > - **决策顺序**：先按默认配置构建；若链接器报 `L6406E`（空间不足），优先调整 LTO 与优化等级，再考虑摘除非必需命令（如 `stack`）或临时放宽分区。
 
@@ -201,9 +201,9 @@ APP 侧源码接入（`user/<mcu>/Src/`）：
 > |------|----------|------|------|
 > | `QBOOT_CHECK` | `Makefile.qboot` | `./QBOOT_CHECK/QBOOT_CHECK.{elf,hex,bin}` | 仅完整性，无钥匙（`QUILLA_SB_BOOT_MODE=CHECK`） |
 > | `QBOOT_SEALED` | `Makefile.qboot.sealed` | `./QBOOT_SEALED/QBOOT_SEALED.{elf,hex,bin}` | 开发态，默认钥匙（`QUILLA_QBOOT_DEFAULT_KEY` + `SEALED`） |
-> | `QBOOT_SEC` | `Makefile.qboot.sec` | `./QBOOT_SEC/QBOOT_SEC.{elf,hex,bin}` | 量产态，SECURE 模式每电验签（`QUILLA_QBOOT_DEFAULT_KEY` + `SECURE` + `QUILLA_PRODUCTION_BUILD`）；钥匙与 SEALED 同一把，替换见 makefile 头注释 |
+> | `QBOOT_SECURED` | `Makefile.qboot.secured` | `./QBOOT_SECURED/QBOOT_SECURED.{elf,hex,bin}` | 量产态，SECURE 模式每电验签（`QUILLA_QBOOT_DEFAULT_KEY` + `SECURE` + `QUILLA_PRODUCTION_BUILD`）；钥匙与 SEALED 同一把，替换见 makefile 头注释 |
 >
-> 三个变体差异仅在 `C_DEFS`（宏清单见 `doc/secure-boot.md` §3.1）。SEALED 与 SEC 编译进的是**同一把默认钥匙**，出货前都须在 `quilla-qboot-pubkey.h` 替换为自有公钥（是否替换由客户决定，仍用默认钥匙时头文件会发编译警告）；两个 MCU 的 `EIDE/` 目录均已提供这三个 makefile。
+> 三个变体差异仅在 `C_DEFS`（宏清单见 `doc/secure-boot.md` §3.1）。SEALED 与 SECURED 编译进的是**同一把默认钥匙**，出货前都须替换为自有公钥：GNU 在 `C_DEFS` 加 `-DQUILLA_SECURE_BOOT_PUBKEY={...}`，Keil 须在 `quilla-qboot-pubkey.h` 自行添加产品分支并在 Define 里选它的 token（仓库未预置该分支，模板见 `tools/_keytest/README.md` §3.2）；是否替换由客户决定，仍用默认钥匙时 `quilla-qboot-secure.c` 会发一条编译警告。两个 MCU 的 `EIDE/` 目录均已提供这三个 makefile。
 
 宏与链接：Keil 两工程分别 `QAPP_BUILD`/`QBOOT_BUILD` 并设对应 IROM1；EIDE 加 `QAPP_BUILD` + `py32f040xb_app.ld`；`Makefile` 加 `-DQAPP_BUILD` + `py32f040xb_app.ld`；`Makefile.qboot` 用 `-DQBOOT_BUILD` + `py32f040xb_qboot.ld`。
 

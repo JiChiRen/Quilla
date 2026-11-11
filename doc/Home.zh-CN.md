@@ -15,19 +15,20 @@ Quilla 由**机器人组件及光通信设计公司——深圳市积器仁信�
 
 | 主题 | 文档 |
 |---|---|
-| 双区架构、分区与 QIAP 协议 | `qboot-app-architecture.md` |
-| 构建 QAPP（Keil 工程） | `keil-qboot-app-build.md` |
-| 串口升级上位机对接 | `quilla-host-updater-guide.md`（速查：`quilla-host-updater-brief.zh-CN.md`） |
-| 升级流程与状态机 | `upgrade-flow.md` |
-| 安全启动与密钥管理 | `secure-boot.md` |
-| 启动流程 | `boot-flow.md` |
-| APP 侧 OS API | `app-api-reference.md` |
+| 双区架构、分区与 QIAP 协议 | `qboot-app-architecture.zh-CN.md` |
+| 构建 QAPP（Keil 工程） | `keil-qboot-app-build.zh-CN.md` |
+| 串口升级上位机对接 | `quilla-host-updater-guide.zh-CN.md`（速查：`quilla-host-updater-brief.zh-CN.md`） |
+| 升级流程与状态机 | `upgrade-flow.zh-CN.md` |
+| 安全启动与密钥管理 | `secure-boot.zh-CN.md` |
+| 防回滚：OTP 硬件单调计数器与不做 A/B 的裁定 | `anti-rollback-counter.zh-CN.md` |
+| 启动流程 | `boot-flow.zh-CN.md` |
+| APP 侧 OS API | `app-api-reference.zh-CN.md` |
 
-工具交付说明见 `tools/README.md`：对外提供的是烧录工具与签名工具，其余工具仅用于 Quilla 自身开发。
+工具交付说明见 `tools/README.zh-CN.md`：对外提供的是烧录工具与签名工具，其余工具仅用于 Quilla 自身开发。
 
 ### 安全上岗前必读
 
-- 量产前**必须**把仓库默认（公开）钥匙更换为自有离线密钥对——默认钥匙的私钥随仓库公开，用它出货等同把私钥交出去；是否替换由客户决定，编译期会发 `#warning` 提醒。见 `secure-boot.md`。
+- 量产前**必须**把仓库默认（公开）钥匙更换为自有离线密钥对——默认钥匙的私钥随仓库公开，用它出货等同把私钥交出去；是否替换由客户决定，编译期会发 `#warning` 提醒。见 `secure-boot.zh-CN.md`。
 - 烧录配置为 **Erase Sectors**，禁止 Erase Full Chip（会擦除 FLAG 与 manifest 页）。
 
 ---
@@ -36,8 +37,8 @@ Quilla 由**机器人组件及光通信设计公司——深圳市积器仁信�
 
 | 主题 | 文档 |
 |---|---|
-| CMSIS 与工程树布局 | `cmsis-layout.md` |
-| 平台目录与移植约定 | `port-layout.md` |
+| CMSIS 与工程树布局 | `cmsis-layout.zh-CN.md` |
+| 平台目录与移植约定 | `port-layout.zh-CN.md` |
 
 ---
 
@@ -46,5 +47,5 @@ Quilla 由**机器人组件及光通信设计公司——深圳市积器仁信�
 - 工程树按 MCU 划分：`user/<mcu>/{Src,Inc,EIDE,MDK-ARM}`。
 - 分区：QBOOT `0x08000000`–`0x08005FFF`；META `0x08006000`–`0x08006FFF`；APP `0x08007000` 起至 Flash 末（`APP_END` = Flash 末址，定义在 `arch/cpu/arm/<mcu>/soc.h` 的 `SOC_FLASH_END`）。分区布局由 `quilla-qboot-hal.h` 与每 MCU 的 `soc.h` 共同定义。
 - 本项目禁止动态内存分配。
-- 编码规范及其范围：`coding-guidelines.md`。
+- 编码规范及其范围：`coding-guidelines.zh-CN.md`。
 - 许可证见根目录 `LICENSE.md`。

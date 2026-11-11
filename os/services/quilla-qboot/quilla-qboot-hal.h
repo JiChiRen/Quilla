@@ -57,17 +57,9 @@
 
 #include "sys/int-master.h"
 #include "soc.h"
+#include "quilla-qboot-secure.h"
 
 /* ---- partition layout (platform property, overridable per build) -------- */
-
-/* Erase granularity of a whole sector, bytes. Retained for documentation and
- * for any future sector-erase optimisation; the boot path today only ever
- * erases at page granularity (see quilla_qboot_hal_flash_write_page). PY32F040xB
- * has 256 B pages inside 8 KiB sectors; another part of the family may well
- * disagree (e.g. PY32F030 quotes 128 B pages in 4 KiB sectors). */
-#ifndef QUILLA_QBOOT_SECTOR_SIZE
-#define QUILLA_QBOOT_SECTOR_SIZE 8192U
-#endif
 
 /* Programmable Flash erase/program granularity in bytes. Both the flag page
  * and the OTA staging buffers are sized from this. The boot path erases Flash
@@ -97,23 +89,31 @@
 #endif
 /* -> 0x08007000 */
 
-/* Last address of the APP region, inclusive, equals the last address of the
- * internal Flash. This is a pure MCU hardware property and therefore comes
- * from the port's arch/cpu/arm/<mcu>/soc.h as SOC_FLASH_END -- it must never
- * be hard-coded on the build command line. A port that forgets to define
- * SOC_FLASH_END fails loudly here instead of silently using the wrong part's
- * size. An explicit -DQUILLA_QBOOT_APP_END still overrides (e.g. for a custom
- * flash map), but the normal case is to let soc.h supply it. */
+/* Last address of the APP region, inclusive. Single point of definition -- no
+ * #undef/redefine ordering trick. With the WPP counter enabled, the top WRP
+ * sector is reserved as the monotonic-counter region, so the APP region must
+ * end before the counter sector (APP_END is inclusive: one byte below the
+ * counter sector base; a QIAP erase/write there fails loudly with WRPERR).
+ * Otherwise it equals the last address of the internal Flash, supplied by the
+ * port's soc.h as SOC_FLASH_END -- never hard-coded on the build command line.
+ * A port that forgets SOC_FLASH_END fails loudly here. An explicit
+ * -DQUILLA_QBOOT_APP_END still overrides (e.g. for a custom flash map). */
+#if QUILLA_QBOOT_OTP_COUNTER && QUILLA_QBOOT_WPP
+#ifndef QUILLA_QBOOT_APP_END
+#define QUILLA_QBOOT_APP_END  (QUILLA_QBOOT_OTP_BASE - 1U)
+#endif
+#else /* no WPP counter region reserved */
 #ifndef QUILLA_QBOOT_APP_END
 #ifndef SOC_FLASH_END
 #error "QUILLA_QBOOT_APP_END not defined: add SOC_FLASH_END (= last flash address) to arch/cpu/arm/<mcu>/soc.h"
 #endif
 #define QUILLA_QBOOT_APP_END    SOC_FLASH_END
 #endif
+#endif
 
 /* Base of the internal flash the boot images are linked into. */
 #ifndef QUILLA_QBOOT_FLASH_BASE
-#define QUILLA_QBOOT_FLASH_BASE /*0x08000000U*/FLASH_BASE
+#define QUILLA_QBOOT_FLASH_BASE  FLASH_BASE
 #endif
 
 /* Byte offset of the APP image from the flash base. This is the single source
@@ -146,20 +146,6 @@
 #define QUILLA_QBOOT_RAM_SIZE   0x4000U   /* 16 KB on PY32F040xB */
 #endif
 
-/* The QIAP/APP interaction flag is no longer a single fixed page: it is a field
- * of the wear-levelled META record (quilla-qboot-meta.c), which splits the 4 KiB
- * META region into two 2 KiB slots and appends records without erasing the live
- * slot. The secure-boot manifest is likewise a block inside that same record, so
- * neither the flag nor the manifest owns a dedicated page any more -- the
- * erase-window hazard that motivated the old "separate page" rule no longer
- * applies. QUILLA_QBOOT_FLAG_ADDR is retained purely as a documentation alias
- * for the META base (the flag slot's home). */
-#ifndef QUILLA_QBOOT_FLAG_ADDR
-#define QUILLA_QBOOT_FLAG_ADDR  QUILLA_QBOOT_META_BASE
-#endif
-
-/* (QUILLA_QBOOT_PAGE_SIZE is defined earlier in this file, in the partition
- * layout section, so it is available to the APP_START page-alignment #error.) */
 
 /* Attribute applied to page-sized staging buffers. Flash programmers on
  * Cortex-M0+ fault on unaligned word accesses, so callers must hand
@@ -267,6 +253,68 @@ void quilla_qboot_hal_jump_to_app(uint32_t app_start);
  * final say. Implemented per port because the test is CPU-arch specific.
  */
 int quilla_qboot_hal_app_image_valid(void);
+
+/**
+ * \brief          Program ONE byte into the MCU OTP area, WITHOUT erasing
+ * \param addr     Absolute OTP address (inside [QUILLA_QBOOT_OTP_BASE,
+ *                 QUILLA_QBOOT_OTP_BASE + QUILLA_QBOOT_OTP_SIZE))
+ * \param value    Byte to program (0x00 burns the cell)
+ * \retval 0  success
+ * \retval <0 failure (not OTP / cell already programmed / program error)
+ *
+ * OTP cells accept exactly ONE program operation and can never be erased, so
+ * the caller must target a still-erased (0xFF) cell; this routine refuses a
+ * cell that does not read 0xFF beforehand. Used only by the hardware monotonic
+ * counter (quilla-qboot-otp.c) and only when QUILLA_QBOOT_OTP_COUNTER is
+ * enabled on a part with QUILLA_QBOOT_SECPROG_AVAILABLE = 1. Ports without an
+ * OTP area implement this as a stub returning -1; the service layer never
+ * calls it there.
+ */
+int quilla_qboot_hal_otp_program_byte(uint32_t addr, uint8_t value);
+
+/**
+ * \brief          Program ONE counter cell (all zeros), WITHOUT erasing
+ * \param addr     Absolute cell address (inside [QUILLA_QBOOT_OTP_BASE,
+ *                 QUILLA_QBOOT_OTP_BASE + QUILLA_QBOOT_OTP_SIZE)), cell
+ *                 aligned (QUILLA_QBOOT_OTP_CELL_SIZE)
+ * \retval 0  success
+ * \retval <0 failure (cell not virgin / program error / write-protection
+ *            error)
+ *
+ * The cell is the MCU's programming granularity (QUILLA_QBOOT_OTP_CELL_SIZE):
+ * one OTP byte on GD32, one whole 256-byte page on PY32, one 32-bit word on
+ * CH32. The caller must target a still-erased cell; this routine refuses a
+ * cell that does not read all-0xFF beforehand and verifies the burned value
+ * by read-back. Used only by the hardware monotonic counter
+ * (quilla-qboot-otp.c) when QUILLA_QBOOT_OTP_COUNTER is enabled.
+ */
+int quilla_qboot_hal_otp_program_cell(uint32_t addr);
+
+/**
+ * \brief  Current write-protection state of the counter region
+ * \retval 1 the region is write-protected (or requested to be: for parts
+ *           whose option bytes reload on reset, this reflects the stored
+ *           configuration, not the live hardware latch)
+ * \retval 0 the region is NOT write-protected
+ *
+ * Only meaningful on parts with SOC_WPP_AVAILABLE=1 (write-protected NV counter);
+ * true-OTP parts implement this as a constant 0 and never see it called.
+ */
+int quilla_qboot_hal_otp_wrprot_status(void);
+
+/**
+ * \brief     Open or close the write-protection window of the counter region
+ * \param protect 1 = write-protect the region, 0 = lift the protection
+ *
+ * Implemented by rewriting the option bytes (WRP configuration) and then
+ * triggering the option-byte reload, which on parts like PY32 happens
+ * through OBL_LAUNCH and RESETS THE CHIP. This routine therefore NEVER
+ * RETURNS in normal operation; callers must treat it as a reset point. If
+ * the option-byte reload only happens on power-on reset on some parts, the
+ * request still lands in the stored configuration (verified by reading the
+ * raw option bytes back) and takes effect at the next power cycle.
+ */
+void quilla_qboot_hal_otp_wrprot_set(int protect);
 
 /**
  * \brief     Enter and leave a critical section around the RX ring

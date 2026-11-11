@@ -277,7 +277,7 @@
               <OCR_RVCT4>
                 <Type>1</Type>
                 <StartAddress>0x8007000</StartAddress>
-                <Size>0x19000</Size>
+                <Size>0x17000</Size>
               </OCR_RVCT4>
               <OCR_RVCT5>
                 <Type>1</Type>
@@ -338,7 +338,7 @@
             <v6Rtti>0</v6Rtti>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>USE_HAL_DRIVER,PY32F040xB,QAPP_BUILD,QUILLA_QBOOT_APP_START=0x08007000U,QUILLA_QBOOT_FLAG_ADDR=0x08006000U</Define>
+              <Define>USE_HAL_DRIVER,PY32F040xB,QAPP_BUILD,QUILLA_QBOOT_APP_START=0x08007000U</Define>
               <Undefine></Undefine>
               <IncludePath>.;..\..\..\os\;..\..\..\os\sys;..\..\..\os\lib;..\..\..\os\services;..\..\..\os\net;..\..\..\os\net\mac;..\..\..\arch\cpu\arm;..\..\..\arch\cpu\arm\py32f040xb;..\..\..\arch\cpu\arm\CMSIS\Core\Include;..\..\..\arch\platform\arm;..\..\..\arch\platform\arm\py32f040xb;..\src;..\Inc;..\BSP\py32f040xx_Start_Kit;..\..\..\arch\cpu\arm\CMSIS\Device\Puya\PY32F040\Include;..\..\..\arch\cpu\arm\vendor\Puya\PY32F040_HAL_Driver\Inc</IncludePath>
             </VariousControls>

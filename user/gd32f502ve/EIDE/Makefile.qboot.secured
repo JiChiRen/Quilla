@@ -1,15 +1,15 @@
 ##########################################################################################################################
-# Quilla QBOOT_SEC (bootloader) build for GD32F502VE — Makefile.qboot.sec
+# Quilla QBOOT_SECURED (bootloader) build for GD32F502VE — Makefile.qboot.secured
 #
 # PRODUCTION secure-boot variant. Same source closure and link script as
 # Makefile.qboot.sealed (gd32f502xE_qboot.ld, 64K) but built for release:
-#   - QUILLA_PRODUCTION_BUILD  (marks this as the production build; the header
-#     warns loudly if the repository DEFAULT key is still compiled in)
+#   - QUILLA_PRODUCTION_BUILD  (marks this as the production build;
+#     quilla-qboot-secure.c emits one default-key warning)
 #   - QUILLA_QBOOT_DEFAULT_KEY (in-repo default public key compiled in; replace with your own)
 #   - QUILLA_SB_BOOT_MODE=SECURE (Ed25519 verified on EVERY boot)
-#   - QUILLA_QBOOT_VARIANT_STR="SEC"
+#   - the [SECURED] banner tag is derived from QUILLA_SB_BOOT_MODE (no -D needed)
 #
-# The variant prints [SEC] in the boot banner so a device can be told apart
+# The variant prints [SECURED] in the boot banner so a device can be told apart
 # from a development [SEALED] unit at a glance.
 #
 # KEY INJECTION (required before shipping):
@@ -17,16 +17,16 @@
 #      mirroring the QUILLA_QBOOT_DEFAULT_KEY branch but with YOUR public bytes.
 #   2. Define that product macro below (e.g. -DQUILLA_QBOOT_PRODUCT_EXAMPLE).
 # A production build must ship with a real key; if the repository DEFAULT key is
-# still compiled in, the header emits a warning (not an error) reminding you to
-# replace it. QUILLA_PRODUCTION_BUILD only makes that warning louder.
+# still compiled in, quilla-qboot-secure.c emits one warning (not an error)
+# reminding you to replace it. QUILLA_PRODUCTION_BUILD only changes its wording.
 #
-# Build:  make -f Makefile.qboot.sec  (produces ./QBOOT_SEC/QBOOT_SEC.{elf,hex,bin})
+# Build:  make -f Makefile.qboot.secured  (produces ./QBOOT_SECURED/QBOOT_SECURED.{elf,hex,bin})
 ##########################################################################################################################
 
 ######################################
 # target
 ######################################
-TARGET = QBOOT_SEC
+TARGET = QBOOT_SECURED
 
 
 ######################################
@@ -42,7 +42,7 @@ OPT = -Os
 # paths
 #######################################
 # Build path
-BUILD_DIR = QBOOT_SEC
+BUILD_DIR = QBOOT_SECURED
 
 
 ######################################
@@ -58,6 +58,7 @@ C_SOURCES =  \
 ../../../os/services/quilla-qboot/quilla-qiap.c \
 ../../../os/services/quilla-qboot/quilla-qboot-flag.c \
 ../../../os/services/quilla-qboot/quilla-qboot-meta.c \
+../../../os/services/quilla-qboot/quilla-qboot-otp.c \
 ../../../os/services/quilla-qboot/quilla-ed25519.c \
 ../../../os/services/quilla-qboot/quilla-qboot-secure.c \
 ../../../os/lib/sha256.c \
@@ -121,7 +122,8 @@ AS_DEFS =
 
 # The QUILLA_QBOOT_* values must be identical to the ones in Makefile.
 # PRODUCTION KEY: uncomment the product macro below to inject YOUR public key.
-# See quilla-qboot-pubkey.h header for the key-branch template.
+# Key-branch template: tools/_keytest/README.md section 3.2 (add the branch
+# in quilla-qboot-pubkey.h, then select its token here).
 C_DEFS =  \
 -DGD32F50X\
 -DGD32F502\
@@ -129,9 +131,7 @@ C_DEFS =  \
 -DQUILLA_QBOOT_DEFAULT_KEY\
 -DQUILLA_PRODUCTION_BUILD\
 -DQUILLA_SB_BOOT_MODE=QUILLA_SB_BOOT_MODE_SECURE\
--DQUILLA_QBOOT_VARIANT_STR=\"SEC\"\
 -DQUILLA_QBOOT_APP_START=0x08007000U\
--DQUILLA_QBOOT_FLAG_ADDR=0x08006000U\
 -DQUILLA_QBOOT_PAGE_SIZE=2048U\
 -DQUILLA_QBOOT_RAM_START=0x20000000U\
 -DQUILLA_QBOOT_RAM_SIZE=0x00010000U
@@ -185,13 +185,13 @@ vpath %.c $(sort $(dir $(C_SOURCES)))
 OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.S=.o)))
 vpath %.S $(sort $(dir $(ASM_SOURCES)))
 
-$(BUILD_DIR)/%.o: %.c Makefile.qboot.sec | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: %.c Makefile.qboot.secured | $(BUILD_DIR)
 	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
 
-$(BUILD_DIR)/%.o: %.S Makefile.qboot.sec | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: %.S Makefile.qboot.secured | $(BUILD_DIR)
 	$(AS) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile.qboot.sec
+$(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile.qboot.secured
 	$(CC) $(OBJECTS) $(LDFLAGS) -o $@
 	$(SZ) $@
 

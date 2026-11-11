@@ -70,6 +70,7 @@
 #include "quilla-qboot-flag.h"
 #include "quilla-qiap.h"
 #include "quilla-qboot-secure.h"
+#include "quilla-qboot-otp.h"
 #include "contiki.h"
 #include "sys/kern-stack.h"
 #include "sys/kern-flow.h"
@@ -285,6 +286,35 @@ static const shell_cmd_t qboot_pinfo_cmd = {
 };
 
 /* ----------------------------------------------------------------------------
+ * Shell command "secver": report the anti-rollback security-version status.
+ * Query-only -- invoked from the QBOOT shell on demand, never auto-printed at
+ * boot. Shows the firmware security version baked into the APP image and, when
+ * a hardware monotonic counter is compiled in, the counter value (burned cell
+ * count == number of successful ratchets) plus its exhaustion flag.
+ * -------------------------------------------------------------------------- */
+static void
+qboot_secver_cmd_handler(const char *args)
+{
+  uint32_t fw_ver = quilla_qboot_secure_app_version();
+  (void)args;
+  shell_output("[SECVER] FW_SECVER=0x%08X (%s)\r\n",
+               (unsigned)fw_ver,
+               (fw_ver == 0U) ? "missing/corrupt" : "present");
+#if QUILLA_QBOOT_OTP_COUNTER
+  /* Hardware monotonic counter (write-protected NV counter on WRP-protected parts, true OTP on parts
+   * with an OTP area). burned cells == number of successful ratchets; the
+   * device refuses any image whose FW_SECVER is below this. */
+  shell_output("[SECVER] OTP_COUNTER=%u (exhausted=%d)\r\n",
+               (unsigned)quilla_qboot_otp_counter_get(),
+               quilla_qboot_otp_exhausted());
+#endif
+}
+
+static const shell_cmd_t qboot_secver_cmd = {
+  "secver", qboot_secver_cmd_handler, "show anti-rollback security version + HW counter"
+};
+
+/* ----------------------------------------------------------------------------
  * Secure boot gate.
  *
  * A mechanically sane image test is not enough once a verification key is
@@ -343,6 +373,7 @@ qboot_shell_run(void)
   shell_register_cmd(&qboot_qiap_cmd);    /* expose "qiap" to enter upgrade   */
   shell_register_cmd(&qboot_swapp_cmd);  /* expose "swapp" to return to APP  */
   shell_register_cmd(&qboot_pinfo_cmd);  /* expose "pinfo" partition layout  */
+  shell_register_cmd(&qboot_secver_cmd); /* expose "secver" anti-rollback    */
   /* budget 0 = order only, no timing check. This is not laziness:
    * QBOOT_BUILD excludes clock_update_ticks() from clock.c, so clock_time()
    * never advances in this image and a time budget would either be inert or
@@ -353,11 +384,8 @@ qboot_shell_run(void)
    * The host updater (tools/quilla_host_updater.py) keys off the "[BOOT]" tag
    * and the "part" command echo (which contains "qboot") to decide whether to
    * send "qiap" first, so the banner stays minimal with no extra "QBOOT shell"
-   * line. QUILLA_QBOOT_VARIANT_STR is set per build (SEALED / SEC / CHECK);
-   * default "OPEN" must never ship. */
-#ifndef QUILLA_QBOOT_VARIANT_STR
-#define QUILLA_QBOOT_VARIANT_STR "OPEN"
-#endif
+   * line. The variant tag is derived from QUILLA_SB_BOOT_MODE in
+   * quilla-qboot-secure.h; build projects must not define it. */
   shell_puts("\r\n[BOOT] Quilla V" QUILLA_VERSION_STRING " [" QUILLA_QBOOT_VARIANT_STR "]\r\n");
 
   while(1) {
@@ -383,6 +411,19 @@ main(void)
   shell_set_partition_tag("qboot");
 
   flag = quilla_qboot_flag_get();
+
+  /* Settle the hardware monotonic counter against the META floor BEFORE any
+   * branch that may not return -- qboot_qiap_run() (crash-recovery loop) and
+   * qboot_shell_run() (the 'swqboot' QBOOT shell) both run forever and would
+   * otherwise skip the ratchet, leaving 'secver' reporting a stale OTP_COUNTER
+   * on a device parked in the QBOOT shell. All three boot paths therefore
+   * settle first. True-OTP parts (GD32) burn synchronously during QIAP SIGN,
+   * so this is a no-op there; write-protected NV counter parts (PY32 / CH32) may reboot
+   * here to open/close the write-protection window -- two extra resets per
+   * upgrade, and only when QUILLA_QBOOT_OTP_COUNTER = 1 (LEVEL = NONE
+   * compiles to a no-op: no resets, no option-byte wear). */
+  quilla_qboot_otp_sync(quilla_qboot_secure_min_version_get());
+
   if(flag == QUILLA_QBOOT_FLAG_QIAP) {
     qboot_qiap_run();          /* boot straight into upgrade (crash recovery) */
   }

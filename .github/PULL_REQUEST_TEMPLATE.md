@@ -14,7 +14,7 @@
 ## Verification
 <!-- Board + toolchain + QBOOT variant; paste key serial output. -->
 - Board / MCU (e.g. PY32F040xB, GD32F502VE):
-- Variant / image (QBOOT_CHECK / QBOOT_SEALED / QBOOT_SEC / QAPP):
+- Variant / image (QBOOT_CHECK / QBOOT_SEALED / QBOOT_SECURED / QAPP):
 - Toolchain & version (GNU arm-none-eabi-gcc / Keil armclang):
 - Result:
 

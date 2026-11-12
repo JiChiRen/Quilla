@@ -70,33 +70,38 @@ PY32F040xB 为 `0x08007400`），随镜像一并被签名覆盖。版本号属�
     - 等级与硬件匹配 → 无告警。
   - **分区重叠与 APP 自动收缩**：选择 WPP 等级（受写保护 NV 计数器）会占用主闪存顶部一个
     WRP 扇区，因此 `QUILLA_QBOOT_APP_END` 在 `quilla-qboot-hal.h` 中**随 WPP 等级
-    自动收缩到计数区基址**（PY32F040xB → `0x0801E000`、CH32V305RB → `0x0001F000`），
-    仓库自带的 GCC 链接脚本、WCH 链接脚本与 Keil 分散加载文件（`.sct`）均已
-    同步收缩。**集成者使用仓库自带构建配置（Makefile / EIDE / Keil
-    `QAPP.uvprojx` + `QAPP.sct`）时无需手工改分区**；只有自建构建链路才需
-    按同一基址收缩 APP 镜像区。若链路未收缩而 WPP 等级又打开，编译会报
+    自动收缩到计数区基址前一字节**（`APP_END` 为含端点：PY32F040xB →
+    `0x0801DFFF`（基址 `0x0801E000`）、CH32V305RB → `0x0001EFFF`
+    （基址 `0x0001F000`）），
+    仓库自带的 GCC 链接脚本、WCH 链接脚本与 Keil 工程的 IROM1/IRAM1
+    （`QAPP.uvprojx` 的 `OCR_RVCT4`）均已同步收缩；`.sct` 是 uVision 生成
+    产物、不入库。**集成者使用仓库自带构建配置（Makefile / EIDE / Keil
+    `QAPP.uvprojx`）时无需手工改分区**；只有自建构建链路才需
+    按同一边界收缩 APP 镜像区。若链路未收缩而 WPP 等级又打开，编译会报
     "QBOOT: APP_END overlaps WPP counter sector; shrink APP_END"。硬件写保护生效后，QIAP 对该扇区的任何
     擦写都会立即失败并置错误标志（WRPERR/WRPRTERR）——失败是显式可检测的，
     不会静默写坏数据。
-  - **APP 镜像尺寸上限**：启用受写保护 NV 计数器 后，**APP 镜像末址不得超过计数区基址**
-    （PY32F040xB = `0x0801E000`，CH32V305RB = `0x0001F000`）。由于 APP 分区已
-    自动收缩到该基址，仓库自带构建产出的镜像天然不越界；QIAP 按写入数据逐块
+  - **APP 镜像尺寸上限**：启用受写保护 NV 计数器 后，**APP 镜像末址不得超过
+    `QUILLA_QBOOT_APP_END`**，即计数区基址前一字节
+    （PY32F040xB = `0x0801DFFF`，CH32V305RB = `0x0001EFFF`）。由于 APP 分区已
+    自动收缩到该边界，仓库自带构建产出的镜像天然不越界；QIAP 按写入数据逐块
     擦除，镜像未延伸至计数扇区时升级不受影响，延伸至该扇区则擦除因写保护失败。
     出厂打包工具 `qboot_image.py` 内置检查：目标 QBOOT 启用开关时，`pack`/`verify`
     传入 `--otp-counter-base <计数区基址>`，工具即拒绝末址超限的镜像（未启用的
     QBOOT 不应传此参数，此时计数扇区可正常使用）。GD32 真 OTP 不占 flash 分区，
     无需传。
 
-### 2.1.1 配置方法（等级定义在系统层 quilla-qboot-hal.h）
+### 2.1.1 配置方法（等级定义在策略头 quilla-qboot-secure.h）
 
-把功能等级从 per-MCU 的 `soc.h` 上移到 **系统层的
-`os/services/quilla-qboot/quilla-qboot-hal.h`**（默认值按 `soc.h` 能力派生），
-目的是让 GCC 与 Keil 共用同一处事实来源，避免同一颗 MCU 在不同编译器下行为不一致；
-`soc.h` 只保留硬件能力声明。
+功能等级不放在 per-MCU 的 `soc.h`，而定义在**策略头
+`os/services/quilla-qboot/quilla-qboot-secure.h`**（默认值按 `soc.h` 声明的
+硬件能力派生），使 GCC 与 Keil 共用同一处事实来源，同一颗 MCU 在两种编译器下
+行为一致；`soc.h` 只保留硬件能力声明。硬件载体解析与 `APP_END` 分区钳位同样
+由该策略头派生，`quilla-qboot-hal.h` 只负责布局常量与 HAL 接口（CR-0054）。
 
-- **默认等级由 hal.h 按能力派生**：
+- **默认等级由 secure.h 按能力派生**：
 
-  | MCU | 系统层默认（hal.h 派生） | 含义 |
+  | MCU | 策略头默认（secure.h 派生） | 含义 |
   |---|---|---|
   | PY32F040xB | 派生为 WPP（WRP-only，无真 OTP） | 受写保护 NV 计数器 默认启用 |
   | CH32V305RB | 派生为 WPP（同上） | 受写保护 NV 计数器 默认启用 |
@@ -107,10 +112,13 @@ PY32F040xB 为 `0x08007400`），随镜像一并被签名覆盖。版本号属�
   （PY32/CH32 默认派生为 WPP）。适合"设备无外部烧录口、基于 Flash 下限已够用"
   的出货形态（见 §2.3）。
 - **如何开启真 OTP（GD32）**：把 `quilla-qboot-secure.h` 中的
-  `QUILLA_QBOOT_CONF_VALIDATE_TRUE_OTP` 置 1。真 OTP 单元一次可编程、消耗不可逆，
-  量产后置回 0（M33 平台 LTO 体积约束下 SEALED/SECURED 变体也须谨慎，见 §2.1.1）。
+  `QUILLA_QBOOT_CONF_VALIDATE_TRUE_OTP` 置 1。**仓库当前默认 0**（2026-11-12
+  GD32 上板验证结束后已回归），此时 GD32 派生 NONE，编译期会提示
+  `QBOOT: LEVEL=OTP available on this MCU`。真 OTP 单元一次可编程、消耗不可逆，
+  验证/量产后置回 0（M33 平台 LTO 体积约束下 SEALED/SECURED 变体也须谨慎，见 §2.1.1）。
 - **APP 分区无需手工改**：开启受写保护 NV 计数器 后 `quilla-qboot-hal.h` 自动把
-  `QUILLA_QBOOT_APP_END` 收到计数区基址，且仓库自带的 `.ld` / `.sct` 已经收缩；
+  `QUILLA_QBOOT_APP_END` 收到计数区基址，仓库自带的 `.ld` 与 Keil 工程
+  IROM1/IRAM1 已收缩（`.sct` 为生成产物、不入库）；
   集成者只要用仓库自带构建配置即可。自建构建链路者须镜像这一收缩（基址同上）。
 - **打包侧强制上限**：产线打包调用 `qboot_image.py pack/verify` 时，若目标 QBOOT
   启用了开关，一律传 `--otp-counter-base <计数区基址>`，让工具在打包与复核两端
@@ -193,9 +201,9 @@ GD32 OTP 是字节粒度一次性编程（每 +1 消耗 1 字节），无法实�
   计数、低于真 OTP，与常见的 flash 模拟 NV counter（如 STM32 上各类方案）同级。另注意
   选项字节每次修改整页擦写，其擦写寿命低于主闪存，频繁升级需评估。
 - **启用受写保护 NV 计数器 后 APP 镜像的上限**（分区起止本身不变，见 §2.1）：
-  PY32F040xB 的 APP 镜像末址 ≤ `0x0801E000`（有效容量 92 KiB，原 100 KiB 减去
-  顶部 8 KiB 计数扇区）；CH32V305RB 的 APP 镜像末址 ≤ `0x0001F000`（有效容量
-  124 KiB）。`qboot_image.py pack/verify` 传 `--otp-counter-base` 即可在打包
+  PY32F040xB 的 APP 镜像末址 ≤ `0x0801DFFF`（计数区基址 `0x0801E000` 前一字节；
+  有效容量 92 KiB，原 100 KiB 减去顶部 8 KiB 计数扇区）；CH32V305RB 的 APP
+  镜像末址 ≤ `0x0001EFFF`（基址 `0x0001F000` 前一字节；有效容量 124 KiB）。`qboot_image.py pack/verify` 传 `--otp-counter-base` 即可在打包
   与复核两端强制该上限。
 - **为什么不用"直接写保护 META 分区"替代计数扇区**：地址上可行（META
   `0x00006000–0x00006FFF` 正好一个 4 KB WRP 扇区），但方案不成立——
@@ -243,3 +251,8 @@ QBOOT 的单区模型使同样的攻击表现为**显式失败**：任何未通�
 - 告警矩阵实测符合第 2.1 节矩阵（PY32/CH32 带 define 的构建亦通过：受写保护 NV 计数器
   代码全量链接，QBOOT 体积 PY32 22 108 B / CH32 21 951 B，均在 24 K 分区内；
   GD32 带 define 20 272 B）。
+- GD32F502VE 真 OTP 载体已上板验证（2026-11-11/12，Quilla.ZP 板 SECURED）：
+  `secver` 读回 `OTP_COUNTER` 由 1 推进到 2、`exhausted=0`；`pinfo` 确认
+  `APP_END=0x0807FFFF` 不被钳位；签名升级 `ACK_SIGN 0x84` 通过；低版本
+  （真私钥签名）镜像被 QIAP SIGN 拒绝 `NAK(0xC4) reason=0x0A ROLLBACK`；
+  同版本再升级合法且计数器不重复烧写。CH32 WPP 路径仍待上板确认。

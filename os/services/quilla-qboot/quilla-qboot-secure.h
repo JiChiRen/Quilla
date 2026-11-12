@@ -87,7 +87,7 @@
  * Set to 1 to select LEVEL=OTP while validating the true-OTP counter path.
  * True-OTP cells are irreversible; set back to 0 for production, where
  * true-OTP parts fall back to NONE. PY32/CH32 always derive WPP. */
-#define QUILLA_QBOOT_CONF_VALIDATE_TRUE_OTP  1
+#define QUILLA_QBOOT_CONF_VALIDATE_TRUE_OTP  0
 
 #ifndef QUILLA_QBOOT_HW_COUNTER_LEVEL
 #if defined(SOC_OTP_AVAILABLE) && (SOC_OTP_AVAILABLE != 0) && \

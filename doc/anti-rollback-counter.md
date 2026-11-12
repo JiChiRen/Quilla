@@ -92,22 +92,25 @@ two physical attacks:
     - level matches hardware → silent.
   - **Partition overlap and automatic APP shrink**: selecting the WPP level
     (write-protected NV counter) reserves the top WRP sector of main flash, so
-    `QUILLA_QBOOT_APP_END` in `quilla-qboot-hal.h` **auto-shrinks to the
-    counter-region base when the WPP level is selected** (PY32F040xB →
-    `0x0801E000`, CH32V305RB → `0x0001F000`),
+    `QUILLA_QBOOT_APP_END` in `quilla-qboot-hal.h` **auto-shrinks to the byte
+    before the counter-region base when the WPP level is selected** (`APP_END`
+    is inclusive: PY32F040xB → `0x0801DFFF` with base `0x0801E000`,
+    CH32V305RB → `0x0001EFFF` with base `0x0001F000`),
     and the repository's GCC linker scripts, WCH linker scripts and Keil
-    scatter files (`.sct`) have been shrunk to match. **Integrators using the
-    repository's own build configurations (Makefile / EIDE / Keil
-    `QAPP.uvprojx` + `QAPP.sct`) need not adjust the partition by hand**; only
-    a custom build chain must mirror the same base. If a chain is not shrunk
+    IROM1/IRAM1 layout (`OCR_RVCT4` in `QAPP.uvprojx`) have been shrunk to
+    match; the `.sct` is a uVision-generated artifact and is not committed.
+    **Integrators using the repository's own build configurations (Makefile /
+    EIDE / Keil `QAPP.uvprojx`) need not adjust the partition by hand**; only
+    a custom build chain must mirror the same boundary. If a chain is not shrunk
     while the switch is on, the build warns
     "QBOOT: APP_END overlaps WPP counter sector; shrink APP_END". Once the hardware write protection is in
     effect, any QIAP erase/write of that sector fails loudly (WRPERR/WRPRTERR)
     — the failure is explicit and detectable, never a silent corruption.
   - **APP image size limit**: with the WPP level (write-protected NV counter) selected, the **end address
-    of the APP image must not exceed the counter-region base**
-    (PY32F040xB = `0x0801E000`, CH32V305RB = `0x0001F000`). Because the APP
-    partition already auto-shrinks to that base, images built from the
+    of the APP image must not exceed `QUILLA_QBOOT_APP_END`**, i.e. the byte
+    before the counter-region base (PY32F040xB = `0x0801DFFF`,
+    CH32V305RB = `0x0001EFFF`). Because the APP partition already auto-shrinks
+    to that boundary, images built from the
     repository configurations are naturally within bounds; QIAP erases only
     the sectors covered by written data, so an image below the limit upgrades
     normally, while one extending into the counter sector fails on erase due
@@ -118,17 +121,20 @@ two physical attacks:
     the sector is then usable by the APP). GD32 true OTP lives outside the
     flash partition, so nothing needs to be passed there.
 
-### 2.1.1 Configuration method (level defined at the system level in quilla-qboot-hal.h)
+### 2.1.1 Configuration method (level defined in the policy header quilla-qboot-secure.h)
 
-The feature level is lifted out of the per-MCU `soc.h` into the system-level
-**`os/services/quilla-qboot/quilla-qboot-hal.h`** (default derived from the
-`soc.h` capability), so GCC and Keil share one source of truth and the same MCU
-behaves identically under both compilers; `soc.h` keeps only the hardware
-capability declarations.
+The feature level is not in the per-MCU `soc.h`; it is defined in the policy
+header **`os/services/quilla-qboot/quilla-qboot-secure.h`** (default derived
+from the hardware capability declared in `soc.h`), so GCC and Keil share one
+source of truth and the same MCU behaves identically under both compilers;
+`soc.h` keeps only the hardware capability declarations. The hardware carrier
+resolution and the `APP_END` partition clamp are derived in the same policy
+header; `quilla-qboot-hal.h` holds only the layout constants and HAL API
+(CR-0054).
 
-- **Default level derived by hal.h from the capability**:
+- **Default level derived by secure.h from the capability**:
 
-  | MCU | System-level default (derived in hal.h) | Meaning |
+  | MCU | Policy-header default (derived in secure.h) | Meaning |
   |---|---|---|
   | PY32F040xB | derives WPP (WRP-only, no true OTP) | write-protected NV counter enabled by default |
   | CH32V305RB | derives WPP (same) | write-protected NV counter enabled by default |
@@ -140,12 +146,16 @@ capability declarations.
   forms where "the device exposes no external programming interface and the
   Flash-based floor is sufficient" (see §2.3).
 - **How to enable true OTP (GD32)**: set `QUILLA_QBOOT_CONF_VALIDATE_TRUE_OTP`
-  to 1 in `quilla-qboot-secure.h`. True-OTP cells are one-time programmable and
-  consumed irreversibly; set it back to 0 for production (M33 LTO code size
-  also constrains SEALED/SECURED variants — see §2.1.1).
+  to 1 in `quilla-qboot-secure.h`. **The repository default is 0** (restored
+  on 2026-11-12 after GD32 on-target validation), so GD32 derives NONE and the
+  build prints `QBOOT: LEVEL=OTP available on this MCU`. True-OTP cells are
+  one-time programmable and consumed irreversibly; set it back to 0 after
+  validation or for production (M33 LTO code size also constrains
+  SEALED/SECURED variants — see §2.1.1).
 - **No manual APP-partition change**: with the write-protected NV counter on,
   `quilla-qboot-hal.h` pulls `QUILLA_QBOOT_APP_END` down to the counter base,
-  and the repository's `.ld` / `.sct` are already shrunk; integrators only
+  and the repository's `.ld` files and Keil IROM1/IRAM1 layout are already
+  shrunk (the `.sct` is a generated artifact, not committed); integrators only
   need the repository build configurations. A custom build chain must mirror
   this shrink (same base as above).
 - **Enforce the limit at packaging**: when invoking `qboot_image.py pack/verify`
@@ -265,9 +275,10 @@ lifetime.
   need an endurance assessment.
 - **APP image limit once the write-protected NV counter is enabled** (the partition start/end
   addresses themselves are unchanged, see §2.1): for PY32F040xB the APP image
-  end must stay ≤ `0x0801E000` (effective capacity 92 KiB, down from 100 KiB
-  by the top 8 KiB counter sector); for CH32V305RB ≤ `0x0001F000` (effective
-  capacity 124 KiB). `qboot_image.py pack/verify` enforces this on both the
+  end must stay ≤ `0x0801DFFF` (the byte before counter base `0x0801E000`;
+  effective capacity 92 KiB, down from 100 KiB by the top 8 KiB counter
+  sector); for CH32V305RB ≤ `0x0001EFFF` (byte before base `0x0001F000`;
+  effective capacity 124 KiB). `qboot_image.py pack/verify` enforces this on both the
   packaging and the verification side via `--otp-counter-base`.
 - **Why "just write-protect the META partition" is not a substitute for the
   counter sector**: address-wise it would work (META at
@@ -344,3 +355,11 @@ for that.
   define-enabled builds also pass with the write-protected NV counter code fully linked
   (QBOOT size: PY32 22 108 B, CH32 21 951 B, GD32 20 272 B — all inside the
   24 KB partition).
+- The GD32F502VE true-OTP carrier is verified on target (2026-11-11/12,
+  Quilla.ZP board, SECURED): `secver` reported `OTP_COUNTER` advancing from 1
+  to 2 with `exhausted=0`; `pinfo` confirmed `APP_END=0x0807FFFF` (no clamp);
+  a signed upgrade passed with `ACK_SIGN 0x84`; a lower-version image signed
+  with the genuine key was refused at QIAP SIGN with
+  `NAK(0xC4) reason=0x0A ROLLBACK`; a same-version upgrade was accepted with
+  no extra OTP cell burned. The CH32 WPP path is still awaiting on-target
+  confirmation.

@@ -38,7 +38,7 @@ Design constraints:
 - **The META region (which holds the manifest) is not inside the APP region** (`QUILLA_QBOOT_APP_END` = `SOC_FLASH_END`: PY32F040xB `0x0801FFFF`, GD32F502VE `0x0807FFFF`); the upgrade protocol hard-rejects any write into the META region, and the linker never places code there.
 - **META store layout**: the 4 KiB META region is split into two 2 KiB slots — SLOT_A (`0x08006000`) and SLOT_B (`0x08006800`). Each record is a 256 B stride = 64 B meta block (magic `QMTL`, `0x514D544C`) + 128 B manifest block (magic `QMF1`, `0x514D4631`) + 64 B padding, and is **appended** with program-only writes — the live (active) slot is never erased in place. A slot is only erased when it is the standby (the slot that does NOT hold the latest record), and it is pre-erased before the active slot fills. On read, both slots are scanned and the record with the highest sequence is authoritative, so a power loss at any point leaves a fully readable record.
   - The **meta block** carries `flag` (`APP1`/`QIAP`/`QBOOT`), the anti-rollback `floor`, and the sealed-image record (`seal_hash`/`seal_len`).
-  - The **manifest block** carries `version` (assigned by QBOOT from its internal anti-rollback floor at install — never host-supplied and never taken from the firmware image), `image_len`, `hash` and `sig`; it is written only when an image is installed (the QIAP SIGN / integrity-only END path via `quilla_qboot_meta_set_manifest`), never in `QBOOT_CHECK` mode. When no manifest exists the block holds just the `QMF1` magic + `version` with `image_len = 0` and the rest `0xFF`.
+  - The **manifest block** carries `version` (assigned by QBOOT from the signed image's `QUILLA_APP_SECURITY_VERSION` on a keyed install — the current floor is recorded as a placeholder on an integrity-only install; never host-supplied), `image_len`, `hash` and `sig`; it is written only when an image is installed (the QIAP SIGN / integrity-only END path via `quilla_qboot_meta_set_manifest`), never in `QBOOT_CHECK` mode. When no manifest exists the block holds just the `QMF1` magic + `version` with `image_len = 0` and the rest `0xFF`.
   - Both blocks carry independent magic + CRC-32, so a torn write to one block does not invalidate the other ("independent logs").
 
 The single source of truth for all offsets is `QUILLA_QBOOT_APP_START` in `quilla-qboot-hal.h`.
@@ -62,7 +62,7 @@ The single source of truth for all offsets is `QUILLA_QBOOT_APP_START` in `quill
 
 | Direction | CMD | Name | payload |
 | --- | --- | --- | --- |
-| H→M | `0x01` | ENTER | `app_start(4)` + `unlock_key(8)` |
+| H→M | `0x01` | ENTER | `app_start(4)` + `unlock_key(8)` + `image_secver(4)` (the 4-byte security version is required once a verification key is provisioned; see §11.4) |
 | H→M | `0x02` | DATA | `start(4)` + `end(4)` + `data(≤256)` |
 | H→M | `0x03` | END | `total_len(4)` + `total_crc16(2)` |
 | H→M | `0x04` | SIGN | `signature(64)` (64 B total) |
@@ -86,6 +86,7 @@ The single source of truth for all offsets is `QUILLA_QBOOT_APP_START` in `quill
 | `0x08` | Signature verification failed |
 | `0x09` | Image has no usable security-version region (missing `.quilla_secver` / magic mismatch) |
 | `0x0A` | Firmware security version is below the device anti-rollback floor (downgrade rejected) |
+| `0x0B` | ENTER carried no image security version (host tool predates the CR-0055 ENTER extension; rejected before any Flash write) |
 
 ---
 
@@ -99,8 +100,10 @@ Host                                    MCU (QBOOT)
   |                                            |
   |-- (1) Read banner, send 'qiap' if needed --->|  qboot_qiap_run()
   |                                            |
-  |-- ENTER 0x01 ------------------------------->|  Verify addr+key, flag=QIAP
-  |<- ACK 0x81 ---------------------------------|
+  |-- ENTER 0x01 ------------------------------->|  Verify addr+key; keyed devices
+  |                                              |  also verify image_secver >= floor
+  |                                              |  (CR-0055: rejects BEFORE any write)
+  |<- ACK 0x81 ---------------------------------|  then flag=QIAP
   |                                            |
   |-- DATA 0x02 xN (256B/chunk) --------------->|  Per-page read-modify-erase-write + read-back verify
   |<- ACK 0x82 (echo start addr) xN -------------|  Accumulate total_len / total_crc
@@ -300,7 +303,25 @@ quilla_qboot_secure_min_version_set(nv);
 
 The two rejection reasons above use **distinct** reason codes (`0x09` VER, `0x0A` ROLLBACK) rather than reusing `0x08` SIGN, so the host updater reports the *true* cause (a missing version region vs. a downgrade) instead of mislabeling both as "signature failed". A real signature mismatch still returns `0x08`.
 
-The host cannot influence this value, and it is not taken from the firmware image, so neither an operator nor a malicious build can forge a lower version. The actual rollback rejection (`version < floor`) is enforced at boot by `quilla_qboot_secure_verify_app()`; see `boot-flow.md`.
+**ENTER-time precheck (CR-0055).** A downgrade that reached the SIGN gate would already have overwritten the APP region with the older image, so the device would lose its running firmware even though nothing was committed. The host therefore carries the image's security version in the ENTER frame (a 4-byte little-endian extension after the unlock key). Once a verification key is provisioned, QBOOT verifies it right at ENTER — before any Flash write and before the `QIAP` flag is locked in:
+
+```c
+/* keyed devices only, inside the ENTER handler */
+if(len < (4U + QUILLA_QIAP_UNLOCK_LEN + 4U)) {
+    send_nak(1U, QUILLA_QIAP_RC_NO_SECVER); return;  /* host tool too old */
+}
+img_secver = rd32(&payload[4U + QUILLA_QIAP_UNLOCK_LEN]);
+if(img_secver == 0U) {
+    send_nak(1U, QUILLA_QIAP_RC_VER);      return;  /* no usable QAV1 record */
+}
+if(img_secver < quilla_qboot_secure_min_version_get()) {
+    send_nak(1U, QUILLA_QIAP_RC_ROLLBACK); return;  /* downgrade below the floor */
+}
+```
+
+A NAK here destroys nothing: the previous APP stays intact and boots normally after a reset. This check trusts the host-supplied number, so it is an availability guard, **not** a security control — the SIGN gate below still reads the version from the image itself and remains the authority. Unkeyed devices ignore the extra bytes and keep the legacy behaviour.
+
+The host cannot influence this value: it is read from the signed firmware image, so neither an operator nor a malicious build can forge a lower version. The actual rollback rejection (`version < floor`) is enforced at boot by `quilla_qboot_secure_verify_app()`; see `boot-flow.md`.
 
 ### 11.5 Writing the Manifest
 
@@ -386,7 +407,9 @@ For the full parameter list, see `doc/quilla-host-updater-guide.md` §10.4; for 
 | END total length/CRC mismatch | Not committed | NAK `0x06`; resend END or the whole image |
 | SIGN verification failure | Image is in Flash, not committed | NAK `0x08`; the device stays at `flag=QIAP` and a correct signature can be resent |
 | SIGN rejected — no security-version region in the image | Image is in Flash, not committed | NAK `0x09`; rebuild the APP so `.quilla_secver` is emitted (Keil: `.ARM.__at_0x08007400`), then resend |
-| SIGN rejected — downgrade (version below floor) | Image is in Flash, not committed | NAK `0x0A`; the device already accepted a newer version — flash an image whose `QUILLA_APP_SECURITY_VERSION` ≥ the floor |
+| SIGN rejected — downgrade (version below floor) | Image is in Flash, not committed | NAK `0x0A`; the device already accepted a newer version — flash an image whose `QUILLA_APP_SECURITY_VERSION` ≥ the floor. With a current QBOOT + host (CR-0055) this is caught earlier, at ENTER, before any Flash write |
+| ENTER rejected — downgrade (keyed device) | Nothing written, previous APP intact, flag unchanged | NAK `0x0A` at ENTER; install an image whose security version ≥ the device floor |
+| ENTER rejected — host without the image security version | Nothing written, previous APP intact | NAK `0x0B`; update the host tool (CR-0055) |
 | Power loss after commit, before reset | `flag=APP1`, image intact | The new APP boots normally at power-on |
 | manifest write failure | Not committed | NAK `0x05`; rerun the upgrade |
 

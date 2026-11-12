@@ -44,7 +44,7 @@ CRC-CCITT, poly 0x1021, reflected, init value 0, masked with `& 0xFFFF` per byte
 
 | CMD | payload | response |
 |---|---|---|
-| `0x01` ENTER | `app_start(4B LE=0x08007000)` + `unlock_key(8B)` | `0x81` + status / `0xC1` NAK |
+| `0x01` ENTER | `app_start(4B LE=0x08007000)` + `unlock_key(8B)` + `image_secver(4B LE)` | `0x81` + status / `0xC1` NAK |
 | `0x02` DATA | `start(4B)` + `end(4B)` + `data(<=256B)` | `0x82` echoes start / `0xC2` NAK |
 | `0x03` END | `total_len(4B)` + `total_crc16(2B)` | `0x83` + status / `0xC3` NAK |
 

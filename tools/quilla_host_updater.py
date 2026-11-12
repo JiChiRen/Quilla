@@ -11,7 +11,10 @@ Strictly mirrors the firmware-side protocol (see doc/qboot-app-architecture.md Â
     (CCITT poly 0x1021, reflected, initial acc=0).
 
   Commands:
-    ENTER 0x01 : payload = app_start(4B LE) + unlock_key(8B)        -> ACK 0x81
+    ENTER 0x01 : payload = app_start(4B LE) + unlock_key(8B)
+                 + image_secver(4B LE, appended since CR-0055; a device with
+                 a provisioned public key requires it and rejects a downgrade
+                 at ENTER, before any Flash write)                -> ACK 0x81
     DATA  0x02 : payload = start(4B) + end(4B) + data(<=256B)        -> ACK 0x82
     END   0x03 : payload = total_len(4B) + total_crc16(2B)           -> ACK 0x83
     SIGN  0x04 : payload = signature(64B)                           -> ACK 0x84
@@ -98,7 +101,25 @@ REASON = {
           "(missing .quilla_secver section / magic mismatch)",
     0x0A: "ROLLBACK  firmware security version is below the device floor "
           "(downgrade rejected)",
+    0x0B: "NO_SECVER  ENTER carried no image security version; this host tool "
+          "is too old for the flashed QBOOT (update the host tool)",
 }
+
+# ---- Firmware security version (QAV1 record, matches quilla-version.h) ----
+SECVER_OFF       = 0x400
+SECVER_MAGIC_U32 = 0x31564151  # "QAV1"
+
+def firmware_secver(data):
+    """Return the security version baked into a firmware image, or None.
+
+    The record sits at APP_START + SECVER_OFF and is covered by the image
+    signature. This helper only reads it; the device-side SIGN gate remains
+    the authority.
+    """
+    if len(data) < SECVER_OFF + 8:
+        return None
+    magic, version = struct.unpack_from("<II", data, SECVER_OFF)
+    return version if magic == SECVER_MAGIC_U32 else None
 
 # Partition layout (kept in sync with quilla-qboot-hal.h / arch/cpu/arm/<mcu>/soc.h)
 # Physical order is BOOT-META-APP: QBOOT occupies the first 24 KB; the META region
@@ -237,6 +258,8 @@ class Updater:
         self.app_end = 0x0801FFFF          # fallback (PY32F040xB value), overwritten on success
         self.app_size = self.app_end - self.app_start + 1
         self.max_image_size = None         # None = not fetched; host does not enforce a ceiling, defers to device NAK
+        self.device_fw_secver = None       # FW_SECVER reported by the device pinfo
+        self.image_secver = None              # QAV1 version read from the image being sent
         self.ser.reset_input_buffer()
         self.ser.reset_output_buffer()
         time.sleep(0.1)
@@ -416,6 +439,10 @@ class Updater:
         txt = out.decode("latin1", errors="replace")
         m_s = re.search(r"APP_START=0x([0-9A-Fa-f]+)", txt)
         m_e = re.search(r"APP_END=0x([0-9A-Fa-f]+)", txt)
+        m_v = re.search(r"FW_SECVER=0x([0-9A-Fa-f]+)", txt)
+        self.device_fw_secver = int(m_v.group(1), 16) if m_v else None
+        if self.device_fw_secver is not None:
+            self.log("[*] Device FW_SECVER=0x%08X" % self.device_fw_secver)
         if m_s and m_e:
             self.app_start = int(m_s.group(1), 16)
             self.app_end = int(m_e.group(1), 16)
@@ -428,6 +455,37 @@ class Updater:
         self.log("[!] pinfo did not echo the partition (old firmware?): the host "
                  "does not enforce a ceiling; the device ADDR NAK(0x01) enforces "
                  "the real APP-region bound")
+        return False
+
+    def _precheck_secver(self):
+        """Host-side early reject: continue only when image SEC VER >= device SEC VER.
+
+        Returns True to continue, False when the upgrade was skipped and the
+        board was sent back to the APP with swapp. This is a transport-saving
+        pre-check only, and it is skipped whenever either version is unknown.
+        The device-side counterpart (CR-0055) rejects a downgrade at ENTER,
+        also before any Flash write, and remains the authority.
+        """
+        dev, img = self.device_fw_secver, self.image_secver
+        if dev is None or img is None:
+            self.log("[*] SEC VER pre-check skipped (device or image version "
+                     "unavailable); device-side SIGN gate still applies")
+            return True
+        if img >= dev:
+            self.log("[*] SEC VER pre-check OK: image=%u >= device=%u, continuing"
+                     % (img, dev))
+            return True
+        self.log("[!] SEC VER pre-check REJECT: image=%u < device=%u; "
+                 "skipping upgrade and returning to the APP" % (img, dev))
+        # Still in the QBOOT shell here (before qiap/ENTER), so swapp is
+        # accepted. Once flag==QIAP is set the shell refuses it.
+        self.ser.reset_input_buffer()
+        self.ser.write(b"swapp" + bytes([10]))
+        if self._wait_text(b"[QAPP]", timeout=4.0):
+            self.log("[+] Board returned to the APP")
+        else:
+            self.log("[!] No APP banner seen; if still at the QBOOT shell, "
+                     "type swapp manually")
         return False
 
     def ensure_upgrade_mode(self):
@@ -462,7 +520,7 @@ class Updater:
             self.log("[*] Device already in upgrade mode (leftover flag==QIAP), sending ENTER directly")
             self.ser.reset_input_buffer()
             self.enter()
-            return
+            return True
 
         # Use the 'part' fingerprint to identify the partition (both the QBOOT and
         # APP shells have this command; in the upgrade-idle state it is swallowed
@@ -491,7 +549,7 @@ class Updater:
                 self.log("[*] No shell response (upgrade-idle?); trying ENTER directly...")
                 try:
                     self.enter()
-                    return
+                    return True
                 except Exception as e:
                     self.log("[!] Direct ENTER failed: %s" % e)
 
@@ -523,6 +581,8 @@ class Updater:
         # (APP_END depends on each MCU's SOC_FLASH_END) for the host-side
         # pre-check ceiling.
         self.fetch_partition()
+        if not self._precheck_secver():
+            return False
 
         # Send 'qiap' -> wait for 'enter upgrade mode', up to 3 attempts, clearing
         # the input buffer before each send.
@@ -533,7 +593,7 @@ class Updater:
                 self.log("[*] Switched to upgrade mode (qiap attempt %d), sending ENTER" % attempt)
                 self.ser.reset_input_buffer()
                 self.enter()
-                return
+                return True
             self.log("[!] qiap attempt %d did not enter upgrade mode" % attempt)
 
         raise RuntimeError(
@@ -542,8 +602,17 @@ class Updater:
             "from the APP first.\nDiagnostics: banner=%r, part=%r" % (banner, part))
 
     def enter(self):
-        payload = struct.pack("<I", self.app_start) + UNLOCK_KEY
-        self.log("[*] Sending ENTER (app_start=0x%08X, key=QULLOTA1)..." % self.app_start)
+        # The 4-byte image security version (QAV1 record, 0 when the image has
+        # none) lets a keyed QBOOT reject a downgrade right here -- before any
+        # DATA reaches Flash, so the currently running APP is never destroyed
+        # by an upgrade that would be refused at SIGN anyway (CR-0055). The
+        # SIGN gate still reads the version from the image itself and stays
+        # the authority: a lying host only gets a later rejection.
+        secver = self.image_secver if self.image_secver is not None else 0
+        payload = struct.pack("<I", self.app_start) + UNLOCK_KEY + \
+            struct.pack("<I", secver)
+        self.log("[*] Sending ENTER (app_start=0x%08X, key=QULLOTA1, "
+                 "image_secver=%u)..." % (self.app_start, secver))
         r = self._transact(CMD_ENTER, payload, ACK_ENTER)
         status = r[0] if r else 0
         if status != 0:
@@ -686,6 +755,11 @@ class Updater:
             data = f.read()
         if len(data) == 0:
             raise RuntimeError("Firmware file is empty")
+        self.image_secver = firmware_secver(data)
+        if self.image_secver is not None:
+            self.log("[*] Image SEC VER=%u (0x%X)" % (self.image_secver, self.image_secver))
+        else:
+            self.log("[!] Image has no usable QAV1 security-version record")
 
         # First establish the upgrade session (including fetching the real APP-region
         # bounds from the device 'pinfo'), then do the host-side pre-check against
@@ -693,7 +767,9 @@ class Updater:
         # max_image_size is None, the pre-check is skipped, and the device ADDR
         # NAK(0x01) enforces the real bound -- avoiding a hard-coded PY32F040xB
         # value that would wrongly reject GD32.
-        self.ensure_upgrade_mode()
+        if not self.ensure_upgrade_mode():
+            self.log("[*] Upgrade skipped by SEC VER pre-check; no data was sent")
+            return
         if self.max_image_size is not None and len(data) > self.max_image_size:
             raise RuntimeError(
                 "Firmware is %d bytes, exceeding the programmable ceiling of %d bytes "
@@ -735,7 +811,8 @@ def self_test():
     print("[self-test] CRC and frame codec round-trip...")
     # 1) Frame codec round-trip: build_frame, then parsed back by the same
     #    _recv_frame logic.
-    for cmd, payload in [(CMD_ENTER, struct.pack("<I", APP_START) + UNLOCK_KEY),
+    for cmd, payload in [(CMD_ENTER, struct.pack("<I", APP_START) + UNLOCK_KEY
+                          + struct.pack("<I", 1)),   # CR-0055: + image_secver(4B)
                          (CMD_DATA, struct.pack("<II", APP_START, APP_START + 0xFF) + b"\xAA" * 256),
                          (CMD_END, struct.pack("<I", 1234) + struct.pack("<H", 0xBEEF))]:
         frame = build_frame(cmd, payload)

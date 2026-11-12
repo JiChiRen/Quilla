@@ -562,8 +562,13 @@ quilla_qboot_hal_otp_program_byte(uint32_t addr, uint8_t value)
 #if QUILLA_QBOOT_SECPROG_AVAILABLE
   int rc;
 
-  if((addr < QUILLA_QBOOT_OTP_BASE) ||
-     (addr >= (QUILLA_QBOOT_OTP_BASE + QUILLA_QBOOT_OTP_SIZE))) {
+  /* Physical OTP region from soc.h (not the carrier-resolved
+   * QUILLA_QBOOT_OTP_BASE/SIZE): those only exist when a counter carrier is
+   * selected, while this routine compiles whenever SECPROG is physically
+   * available -- including LEVEL=NONE production builds. Same pattern as the
+   * PY32F040xB / CH32V305rb HALs. */
+  if((addr < SOC_OTP_BASE) ||
+     (addr >= (SOC_OTP_BASE + SOC_OTP_SIZE))) {
     return -1;
   }
   rc = gd32_run_ram(((uintptr_t)gd32_otp_prog_ram) & ~(uintptr_t)1U,

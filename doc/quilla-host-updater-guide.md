@@ -111,7 +111,7 @@ def build_frame(cmd, payload):
 
 | Direction | CMD | payload | Response |
 |---|---|---|---|
-| H→M | `0x01` ENTER | `app_start(4B LE)` + `unlock_key(8B)` | `0x81` + status(1) / `0xC1` NAK |
+| H→M | `0x01` ENTER | `app_start(4B LE)` + `unlock_key(8B)` + `image_secver(4B LE)` | `0x81` + status(1) / `0xC1` NAK |
 | H→M | `0x02` DATA | `start(4B)` + `end(4B)` + `data(≤256B)` | `0x82` + echoed start(4) / `0xC2` NAK |
 | H→M | `0x03` END | `total_len(4B)` + `total_crc16(2B)` | `0x83` + status(1) / `0xC3` NAK |
 
@@ -135,6 +135,10 @@ Conventions:
 | `0x05` | PROG Flash program/read-back failure | Abort |
 | `0x06` | LEN total length or total CRC mismatch | Abort |
 | `0x07` | SZ length field does not match data length | Abort |
+| `0x08` | SIGN signature did not verify | Abort (send SIGN only with `--key`) |
+| `0x09` | VER image has no usable security-version region | Rebuild the APP so `.quilla_secver` is emitted |
+| `0x0A` | ROLLBACK downgrade: image version below the device floor | Install an image whose version ≥ the floor |
+| `0x0B` | NO_SECVER ENTER carried no image security version | Update this host tool (CR-0055) |
 
 ---
 
@@ -180,7 +184,7 @@ Constants are taken from `quilla-qboot-hal.h` and `quilla-qiap.h`:
 |---|---|
 | `Updater(port, baud=115200, verbose=True)` | Open the serial port and flush the buffer |
 | `ensure_upgrade_mode()` | Decide whether to send `qiap` based on the §3 banner determination; also queries `pinfo` to learn the device's real partition layout |
-| `enter()` | Send ENTER (app_start + key), set the `QIAP` flag; `app_start` comes from the device `pinfo` |
+| `enter()` | Send ENTER (app_start + key + image_secver), set the `QIAP` flag; `app_start` comes from the device `pinfo`, `image_secver` from the image's QAV1 record |
 | `send_data(data, base=None)` | Send DATA in chunks, returning `(total_len, total_crc)`; `base` defaults to the device `APP_START` |
 | `end(total_len, total_crc)` | Send END, write back APP1 and reset |
 | `run(bin_path)` | Sequence: read bin → `ensure_upgrade_mode` → (host cap check) → `enter` → `send_data` → `end` |
@@ -281,3 +285,37 @@ The self-test verifies only the codec and CRC; it does not replace hardware inte
 | Startup branching (shell / upgrade / jump to APP) | `os/services/quilla-qboot/qboot-main.c` |
 | QBOOT flag state | `os/services/quilla-qboot/quilla-qboot-flag.{h,c}` |
 | `swqboot` command | `os/services/quilla-qboot/quilla-app-qboot.c` |
+
+---
+
+## 13. SEC VER pre-check (host side, CR-0053)
+
+Before entering QIAP (sending ENTER), both the CLI and the GUI compare the
+`FW_SECVER` reported by `pinfo` with the QAV1 version at offset `0x400` of the
+image to be written:
+
+- `image >= device`: continue the IAP. A same-version image is accepted, matching
+  the device-side strict `< floor` check.
+- `image < device`: send no ENTER and no data, issue `swapp` to return the board to
+  the APP, and finish normally (GUI shows "Skipped").
+- Either version unreadable (old QBOOT, image without QAV1, upgrade-idle state):
+  skip the pre-check and follow the original flow.
+
+This pre-check only saves transfer time and improves log readability; it is **not
+a security control**. `FW_SECVER` is the version of the current APP image, not the
+strict floor derived from META / OTP counters.
+
+### 13.1 Device-side early reject at ENTER (CR-0055)
+
+Since QBOOT gained the matching device-side gate, the ENTER frame carries the
+image's security version as a 4-byte LE extension after the unlock key. On a
+device with a provisioned public key, a downgrade (`image_secver < floor`), a
+missing QAV1 record (`0`), or a host tool without the extension is rejected
+**at ENTER — before any Flash write and before the QIAP flag is set** — so the
+currently running APP is never overwritten by an image that would be refused
+anyway. The host reports the NAK (`0x0A` rollback / `0x09` no version region /
+`0x0B` host too old) and stops; the board stays in upgrade-wait mode (flag
+unchanged), and rerunning with a suitable image or power-cycling both recover
+it. The SIGN gate still reads the version from the image itself and remains the
+authority. An older QBOOT ignores the extra ENTER bytes, so a new host works
+against an old bootloader unchanged.

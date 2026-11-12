@@ -113,7 +113,7 @@ def build_frame(cmd, payload):
 
 | 方向 | CMD | payload | 响应 |
 |---|---|---|---|
-| H→M | `0x01` ENTER | `app_start(4B LE)` + `unlock_key(8B)` | `0x81` + status(1) / `0xC1` NAK |
+| H→M | `0x01` ENTER | `app_start(4B LE)` + `unlock_key(8B)` + `image_secver(4B LE)` | `0x81` + status(1) / `0xC1` NAK |
 | H→M | `0x02` DATA | `start(4B)` + `end(4B)` + `data(≤256B)` | `0x82` + 回显 start(4) / `0xC2` NAK |
 | H→M | `0x03` END | `total_len(4B)` + `total_crc16(2B)` | `0x83` + status(1) / `0xC3` NAK |
 
@@ -137,6 +137,10 @@ def build_frame(cmd, payload):
 | `0x05` | PROG Flash 编程/回读失败 | 终止 |
 | `0x06` | LEN 总长或总 CRC 不符 | 终止 |
 | `0x07` | SZ 长度字段与数据长度不符 | 终止 |
+| `0x08` | SIGN 签名校验未通过 | 终止（仅 `--key` 时才发 SIGN） |
+| `0x09` | VER 镜像无可用安全版本区 | 重编 APP 使 `.quilla_secver` 进镜像 |
+| `0x0A` | ROLLBACK 降级：镜像版本低于设备下限 | 安装版本 ≥ 下限的镜像 |
+| `0x0B` | NO_SECVER ENTER 未携带镜像安全版本 | 更新上位机工具（CR-0055） |
 
 ---
 
@@ -182,7 +186,7 @@ def build_frame(cmd, payload):
 |---|---|
 | `Updater(port, baud=115200, verbose=True)` | 打开串口并清空缓冲 |
 | `ensure_upgrade_mode()` | 按 §3 banner 判定决定是否发送 `qiap`；同时查询 `pinfo` 取得设备真实分区布局 |
-| `enter()` | 发送 ENTER（app_start + key），落 `QIAP` 标志；`app_start` 取自设备 `pinfo` |
+| `enter()` | 发送 ENTER（app_start + key + image_secver），落 `QIAP` 标志；`app_start` 取自设备 `pinfo`，`image_secver` 取自镜像 QAV1 记录 |
 | `send_data(data, base=None)` | 分片发送 DATA，返回 `(total_len, total_crc)`；`base` 默认取设备 `APP_START` |
 | `end(total_len, total_crc)` | 发送 END，写回 APP1 并复位 |
 | `run(bin_path)` | 串联：读 bin → `ensure_upgrade_mode` →（主机上限检查）→ `enter` → `send_data` → `end` |
@@ -283,3 +287,29 @@ python tools/quilla_host_updater.py --self-test
 | 启动分支（shell / 升级 / 跳转 APP） | `os/services/quilla-qboot/qboot-main.c`（共享） |
 | QBOOT 标志状态 | `os/services/quilla-qboot/quilla-qboot-flag.{h,c}` |
 | `swqboot` 命令 | `os/services/quilla-qboot/quilla-app-qboot.c` |
+
+---
+
+## 13. SEC VER 版本预检（上位机侧，CR-0053）
+
+CLI 与 GUI 在进入 QIAP（发送 ENTER）之前，用 `pinfo` 回报的 `FW_SECVER` 与待烧录
+镜像 `0x400` 处 QAV1 记录的版本比较：
+
+- `image >= device`：继续 IAP；同版本放行，与设备侧 `< floor` 判据一致。
+- `image < device`：不发 ENTER、不传数据，发送 `swapp` 让设备返回 APP，工具正常
+  结束（GUI 状态显示「已跳过」）。
+- 任一侧版本不可读（旧 QBOOT 无该行、镜像无 QAV1 段、升级空闲态）：跳过预检，
+  按原流程进行。
+
+该预检只用于省传输、改善日志可读性，**不是安全控制**。`FW_SECVER` 是当前 APP 镜像的
+版本，不是 META floor / OTP 计数器的严格下限。
+
+### 13.1 设备侧 ENTER 阶段提前拒绝（CR-0055）
+
+QBOOT 侧配套闸门加入后，ENTER 帧在 unlock key 之后携带 4 字节小端的镜像安全版本。
+已烧公钥的设备在 ENTER 当场校验：降级（`image_secver < floor`）、镜像无 QAV1 记录
+（报 0）、或上位机未携带该字段——都在**任何 Flash 写入和 `QIAP` 标志置位之前**拒绝，
+当前运行的 APP 不会被注定被拒的镜像覆盖。上位机收到 NAK（`0x0A` 降级 / `0x09` 无版本
+区 / `0x0B` 上位机过旧）后报错停止；设备停在升级等待态（flag 未变），换合适镜像重跑
+或重新上电均可恢复。SIGN 闸仍从镜像自身读版本，才是权威。旧版 QBOOT 忽略 ENTER 的
+多余字节，新上位机对旧 bootloader 的行为不变。

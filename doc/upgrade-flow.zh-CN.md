@@ -38,7 +38,7 @@
 - **META 区（含 manifest）不在 APP 区内**（`QUILLA_QBOOT_APP_END` = `SOC_FLASH_END`：PY32F040xB `0x0801FFFF`，GD32F502VE `0x0807FFFF`）；升级协议硬性拒绝任何写入 META 区的地址，链接器也不会在该处放置代码。
 - **META 存储布局**：4 KB META 区拆成两个 2 KB 槽——SLOT_A（`0x08006000`）与 SLOT_B（`0x08006800`）。每条记录为 256 B 步长 = 64 B meta 块（magic `QMTL`，`0x514D544C`）+ 128 B manifest 块（magic `QMF1`，`0x514D4631`）+ 64 B 填充，并以**只编程不擦除**的方式追加写入——活动槽（active）永不在原地擦除。只有当某槽是 standby（不持有最新记录的槽）时才会被擦除，且会在 active 槽写满之前预先擦好。读取时扫描两个槽、取序列号最高的有效记录为权威，因此任何时刻掉电都留下一条完整可读的记录。
   - **meta 块**携带 `flag`（`APP1`/`QIAP`/`QBOOT`）、防回滚 `floor` 与密封镜像记录（`seal_hash`/`seal_len`）。
-  - **manifest 块**携带 `version`（由 QBOOT 在安装时依内部防回滚下限赋值——既不来自上位机，也不取自固件镜像）、`image_len`、`hash` 与 `sig`；只在安装镜像时写入（QIAP 的 SIGN / 仅完整性 END 路径经 `quilla_qboot_meta_set_manifest`），`QBOOT_CHECK` 模式下从不写入。无 manifest 时该块仅含 `QMF1` magic + `version` 且 `image_len = 0`，其余为 `0xFF`。
+  - **manifest 块**携带 `version`（密钥安装时由 QBOOT 取自签名镜像的 `QUILLA_APP_SECURITY_VERSION`——仅完整性安装时记录当前下限作占位；不来自上位机）、`image_len`、`hash` 与 `sig`；只在安装镜像时写入（QIAP 的 SIGN / 仅完整性 END 路径经 `quilla_qboot_meta_set_manifest`），`QBOOT_CHECK` 模式下从不写入。无 manifest 时该块仅含 `QMF1` magic + `version` 且 `image_len = 0`，其余为 `0xFF`。
   - 两个块各自带独立 magic + CRC-32，因此其中一个块写入撕裂不会拖垮另一个（"独立日志"）。
 
 所有偏移量的唯一来源是 `quilla-qboot-hal.h` 的 `QUILLA_QBOOT_APP_START`。
@@ -62,7 +62,7 @@
 
 | 方向 | CMD | 名称 | payload |
 | --- | --- | --- | --- |
-| H→M | `0x01` | ENTER | `app_start(4)` + `unlock_key(8)` |
+| H→M | `0x01` | ENTER | `app_start(4)` + `unlock_key(8)` + `image_secver(4)`（已烧公钥的设备必须携带这 4 字节安全版本；见 §11.4） |
 | H→M | `0x02` | DATA | `start(4)` + `end(4)` + `data(≤256)` |
 | H→M | `0x03` | END | `total_len(4)` + `total_crc16(2)` |
 | H→M | `0x04` | SIGN | `signature(64)`（共 64 B） |
@@ -86,6 +86,7 @@
 | `0x08` | 签名校验未通过 |
 | `0x09` | 镜像无可用安全版本区（缺 `.quilla_secver` / magic 不符） |
 | `0x0A` | 固件安全版本低于设备防回滚下限（拒绝降级） |
+| `0x0B` | ENTER 未携带镜像安全版本（上位机工具落后于 CR-0055 的 ENTER 扩展；在写入任何 Flash 前即拒绝） |
 
 ---
 
@@ -99,8 +100,10 @@
   |                                            |
   |-- (1) 读取 banner，必要时发 'qiap' ---------->|  qboot_qiap_run()
   |                                            |
-  |-- ENTER 0x01 ------------------------------>|  校验地址+密钥, flag=QIAP
-  |<- ACK 0x81 --------------------------------|
+  |-- ENTER 0x01 ------------------------------>|  校验地址+密钥；已烧公钥的设备
+  |                                              |  还校验 image_secver >= floor
+  |                                              |  （CR-0055：写入前即拒绝）
+  |<- ACK 0x81 --------------------------------|  通过后 flag=QIAP
   |                                            |
   |-- DATA 0x02 ×N (每片 256B) --------------->|  逐页读-改-擦-写 + 回读校验
   |<- ACK 0x82 (回显起始地址) ×N ---------------|  累加 total_len / total_crc
@@ -299,7 +302,25 @@ quilla_qboot_meta_set_manifest(nv, rx_total_len, hash, payload);
 quilla_qboot_secure_min_version_set(nv);
 ```
 
-上位机无法影响该值，它也不取自固件镜像，因此操作员与恶意构建都无法伪造更低的版本。真正的回滚拒绝（`version < floor`）在启动时由 `quilla_qboot_secure_verify_app()` 执行，见 [`boot-flow.md`](boot-flow.md)。
+上位机无法影响该值：它取自已签名的固件镜像，因此操作员与恶意构建都无法伪造更低的版本。真正的回滚拒绝（`version < floor`）在启动时由 `quilla_qboot_secure_verify_app()` 执行，见 [`boot-flow.md`](boot-flow.md)。
+
+**ENTER 阶段预检（CR-0055）。** 降级镜像若走到 SIGN 才被拒，APP 区此时已被旧镜像覆盖——即便什么都没提交，设备当前运行的固件也已经丢了。因此上位机在 ENTER 帧中携带镜像的安全版本（unlock key 之后的 4 字节小端扩展）；已烧公钥的设备在 ENTER 当场校验——任何 Flash 写入和 `QIAP` 标志置位之前：
+
+```c
+/* 仅已烧公钥的设备，ENTER 处理分支内 */
+if(len < (4U + QUILLA_QIAP_UNLOCK_LEN + 4U)) {
+    send_nak(1U, QUILLA_QIAP_RC_NO_SECVER); return;  /* 上位机工具过旧 */
+}
+img_secver = rd32(&payload[4U + QUILLA_QIAP_UNLOCK_LEN]);
+if(img_secver == 0U) {
+    send_nak(1U, QUILLA_QIAP_RC_VER);      return;  /* 无可用 QAV1 记录 */
+}
+if(img_secver < quilla_qboot_secure_min_version_get()) {
+    send_nak(1U, QUILLA_QIAP_RC_ROLLBACK); return;  /* 低于下限，拒绝降级 */
+}
+```
+
+此处的 NAK 不破坏任何东西：原 APP 完好，复位后照常启动。该校验信任的是上位机报来的数字，属于可用性保护，**不是**安全控制——下方的 SIGN 闸仍从镜像自身读版本，才是权威。未烧公钥的设备忽略多余字节，保持原有行为。
 
 ### 11.5 写 manifest
 
@@ -382,7 +403,9 @@ python tools/quilla_ed25519_sign.py keygen --dir keys/prod
 | END 总长度/CRC 不符 | 未提交 | NAK `0x06`，重发 END 或整包 |
 | SIGN 验签失败 | 镜像在 Flash，未提交 | NAK `0x08`；设备停在 `flag=QIAP`，可重发正确签名 |
 | SIGN 拒——镜像无安全版本区 | 镜像在 Flash，未提交 | NAK `0x09`；重编 APP 使 `.quilla_secver` 进镜像（Keil：`.ARM.__at_0x08007400`）后重发 |
-| SIGN 拒——降级（版本低于下限） | 镜像在 Flash，未提交 | NAK `0x0A`；设备已接受过更新版本——烧录 `QUILLA_APP_SECURITY_VERSION` ≥ 下限的镜像 |
+| SIGN 拒——降级（版本低于下限） | 镜像在 Flash，未提交 | NAK `0x0A`；设备已接受过更新版本——烧录 `QUILLA_APP_SECURITY_VERSION` ≥ 下限的镜像。新版 QBOOT + 新版上位机（CR-0055）下会提前到 ENTER 拒，不发生任何写入 |
+| ENTER 拒——降级（已烧公钥设备） | 无任何写入，原 APP 完好，flag 未变 | ENTER 处 NAK `0x0A`；安装安全版本 ≥ 设备下限的镜像 |
+| ENTER 拒——上位机未携带镜像安全版本 | 无任何写入，原 APP 完好 | NAK `0x0B`；更新上位机工具（CR-0055） |
 | 提交后、复位前掉电 | `flag=APP1`，镜像完整 | 上电正常启动新 APP |
 | manifest 写入失败 | 未提交 | NAK `0x05`，重跑升级 |
 

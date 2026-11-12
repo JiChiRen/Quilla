@@ -247,6 +247,40 @@ dispatch(void)
       send_nak(1U, QUILLA_QIAP_RC_KEY);
       return;
     }
+    /* Early anti-rollback precheck (CR-0055). The old SIGN-time gate only ran
+     * after every DATA frame had already been written into the APP region, so
+     * a rejected downgrade still destroyed the currently running APP and left
+     * the device parked in the QIAP/QBOOT shell until a suitable image was
+     * installed. The host now carries the image's FW_SECVER (the QAV1 record
+     * at APP_START + 0x400) in a 4-byte ENTER extension, so the downgrade is
+     * refused HERE -- before any Flash write and before the QIAP flag is
+     * locked in; a reset afterwards boots the intact previous APP as usual.
+     *
+     * Trust boundary (unchanged, by design): this check trusts the
+     * host-supplied number and is an availability/UX guard, not a security
+     * control. The SIGN gate below still reads the version from the image
+     * itself and is the authority; a host that lies here only buys itself a
+     * later, destructive rejection. Unkeyed devices keep the legacy ENTER
+     * shape: no anti-rollback enforcement, extra bytes ignored. */
+    if(quilla_qboot_secure_pubkey_active()) {
+      uint32_t img_secver;
+      if(len < (4U + QUILLA_QIAP_UNLOCK_LEN + 4U)) {
+        /* Keyed device + host without the extension: refuse up front rather
+         * than letting it erase the APP and fail at SIGN. */
+        send_nak(1U, QUILLA_QIAP_RC_NO_SECVER);
+        return;
+      }
+      img_secver = rd32(&payload[4U + QUILLA_QIAP_UNLOCK_LEN]);
+      if(img_secver == 0U) {
+        /* Mirrors the SIGN gate: no usable QAV1 record in the image. */
+        send_nak(1U, QUILLA_QIAP_RC_VER);
+        return;
+      }
+      if(img_secver < quilla_qboot_secure_min_version_get()) {
+        send_nak(1U, QUILLA_QIAP_RC_ROLLBACK);
+        return;
+      }
+    }
     rx_total_len = 0U;
     rx_total_crc = 0U;
     end_seen = 0;

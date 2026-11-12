@@ -230,7 +230,7 @@ uint16_t crc16_add(uint8_t b, uint16_t acc) {
 
 | 方向 | CMD | 名称 | PAYLOAD |
 | --- | --- | --- | --- |
-| H→M | `0x01` | ENTER_OTA_REQ | `app_start_addr(4)` + `unlock_key(N)` |
+| H→M | `0x01` | ENTER_OTA_REQ | `app_start_addr(4)` + `unlock_key(8)` + `image_secver(4)`（已烧公钥的设备必须携带；见 §8.3 步骤 1） |
 | M→H | `0x81` | ACK_ENTER | `status(1)`（0=OK） |
 | H→M | `0x02` | DATA_FRAME | `start_addr(4)` + `end_addr(4)` + `data(LEN-8)` |
 | M→H | `0x82` | ACK_DATA | `start_addr(4)`（回显本帧起始，便于续传/重传） |
@@ -245,8 +245,8 @@ uint16_t crc16_add(uint8_t b, uint16_t acc) {
 ### 8.3 流程
 
 1. **握手（确认目标 + 解锁）**
-   - 上位机发 `ENTER_OTA_REQ`：`app_start_addr = 0x08007000` + 约定的 `unlock_key`（建议 8 字节，出厂/配置写入）。
-   - QBOOT 校验 `app_start_addr == APP_START` 且 `unlock_key == QBOOT_UNLOCK_KEY`：
+   - 上位机发 `ENTER_OTA_REQ`：`app_start_addr = 0x08007000` + 约定的 `unlock_key`（8 字节，出厂/配置写入）+ 镜像的 `image_secver`（4 字节小端，即 `APP_START + 0x400` 处的 QAV1 记录；镜像没有该记录时报 0）。
+   - QBOOT 校验 `app_start_addr == APP_START` 且 `unlock_key == QBOOT_UNLOCK_KEY`；已烧公钥时还校验 `image_secver`（CR-0055）：为 0 → NAK `0x09`，低于防回滚下限 → NAK `0x0A`，帧中缺失 → NAK `0x0B`。此处的拒绝发生在**任何 Flash 写入之前**，当前运行的 APP 不受影响。
      - 均正确 → 回 `0x81 ACK_ENTER`，进入"接收数据"状态；
      - 校验通过即把交互标志写为 `QIAP`（`quilla_qboot_flag_set(QUILLA_QBOOT_FLAG_QIAP)`），使升级中途掉电/复位后下次自动重进升级，不会跳半残 APP。
      - 任一不符 → 回 `0xC1 NAK`（reason），可重试有限次，超时退出/回 APP。

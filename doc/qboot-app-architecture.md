@@ -236,7 +236,7 @@ uint16_t crc16_add(uint8_t b, uint16_t acc) {
 
 | Direction | CMD | Name | PAYLOAD |
 | --- | --- | --- | --- |
-| H→M | `0x01` | ENTER_OTA_REQ | `app_start_addr(4)` + `unlock_key(N)` |
+| H→M | `0x01` | ENTER_OTA_REQ | `app_start_addr(4)` + `unlock_key(8)` + `image_secver(4)` (required once a public key is flashed; see §8.3 step 1) |
 | M→H | `0x81` | ACK_ENTER | `status(1)` (0=OK) |
 | H→M | `0x02` | DATA_FRAME | `start_addr(4)` + `end_addr(4)` + `data(LEN-8)` |
 | M→H | `0x82` | ACK_DATA | `start_addr(4)` (echoes this frame's start address, for continuation/retransmission) |
@@ -251,9 +251,9 @@ uint16_t crc16_add(uint8_t b, uint16_t acc) {
 ### 8.3 Flow
 
 1. **Handshake (target confirmation + unlock)**
-   - The host sends `ENTER_OTA_REQ`: `app_start_addr = 0x08007000` + the agreed `unlock_key` (8 bytes recommended, written at factory/configuration).
-   - QBOOT verifies `app_start_addr == APP_START` and `unlock_key == QBOOT_UNLOCK_KEY`:
-     - Both correct → replies `0x81 ACK_ENTER`, entering the "receiving data" state;
+   - The host sends `ENTER_OTA_REQ`: `app_start_addr = 0x08007000` + the agreed `unlock_key` (8 bytes, written at factory/configuration) + the image's `image_secver` (4-byte LE, the QAV1 record at `APP_START + 0x400`; `0` when the image has none).
+   - QBOOT verifies `app_start_addr == APP_START` and `unlock_key == QBOOT_UNLOCK_KEY`; once a public key is flashed it also verifies `image_secver` (CR-0055): `0` → NAK `0x09`, below the anti-rollback floor → NAK `0x0A`, missing from the frame → NAK `0x0B`. A rejection here happens **before any Flash write**, so the currently running APP stays intact.
+     - All correct → replies `0x81 ACK_ENTER`, entering the "receiving data" state;
      - Once verification passes, the interaction flag is written as `QIAP` (`quilla_qboot_flag_set(QUILLA_QBOOT_FLAG_QIAP)`), so that after a power loss/reset mid-upgrade, the next boot automatically re-enters the upgrade instead of jumping to a half-broken APP.
      - Any mismatch → replies `0xC1 NAK` (reason); limited retries are allowed, and on timeout it exits/returns to APP.
 

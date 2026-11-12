@@ -58,7 +58,9 @@
 /* ---- protocol constants (mirror doc/qboot-app-architecture.md) ------------- */
 #define QUILLA_QIAP_SOF        0xA5U
 
-#define QUILLA_QIAP_CMD_ENTER  0x01U   /* H->M: app_start_addr(4) + unlock_key(N) */
+#define QUILLA_QIAP_CMD_ENTER  0x01U   /* H->M: app_start_addr(4) + unlock_key(8)
+                                        *       [+ image_secver(4); required once
+                                        *        a verification key is provisioned] */
 #define QUILLA_QIAP_CMD_DATA   0x02U   /* H->M: start_addr(4) + end_addr(4) + data */
 #define QUILLA_QIAP_CMD_END    0x03U   /* H->M: total_len(4) + total_crc16(2)     */
 #define QUILLA_QIAP_CMD_SIGN   0x04U   /* H->M: signature(64)                     */
@@ -83,6 +85,9 @@
 #define QUILLA_QIAP_RC_SIGN    0x08U   /* signature did not verify / not signed  */
 #define QUILLA_QIAP_RC_VER     0x09U   /* image has no usable security-version region */
 #define QUILLA_QIAP_RC_ROLLBACK 0x0AU  /* firmware security version below device floor (downgrade) */
+#define QUILLA_QIAP_RC_NO_SECVER 0x0BU /* ENTER carries no image security version
+                                        * (host tool predates the CR-0055 ENTER
+                                        * extension; rejected before any write) */
 
 /* Max payload per frame: one Flash page of data plus the 8-byte (start,end)
  * header. The host chunks larger writes. */

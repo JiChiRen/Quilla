@@ -44,7 +44,7 @@ CRC-CCITT，poly 0x1021，反射型，初值 0，逐字节 `& 0xFFFF`（对齐 `
 
 | CMD | payload | 响应 |
 |---|---|---|
-| `0x01` ENTER | `app_start(4B LE=0x08007000)` + `unlock_key(8B)` | `0x81` + status / `0xC1` NAK |
+| `0x01` ENTER | `app_start(4B LE=0x08007000)` + `unlock_key(8B)` + `image_secver(4B LE)` | `0x81` + status / `0xC1` NAK |
 | `0x02` DATA | `start(4B)` + `end(4B)` + `data(≤256B)` | `0x82` 回显 start / `0xC2` NAK |
 | `0x03` END | `total_len(4B)` + `total_crc16(2B)` | `0x83` + status / `0xC3` NAK |
 

@@ -21,6 +21,32 @@
 
 **中文** · [English](README.md)
 
+## 一眼看懂
+
+**是什么**：面向小资源 MCU、具备安全启动与 OTA 能力的嵌入式 OS。24 KiB 的
+QBOOT 验签 Ed25519 签名的 APP、执行防回滚下限，并通过 QIAP 经串口升级镜像。
+代码基线为 Contiki-NG（3-clause BSD）。
+
+**最短可复现路径**（PY32F040xB 或 GD32F502VE 板）：
+
+1. 构建 QBOOT（`make -C user/<mcu>/EIDE -f Makefile.qboot`，或用 Keil 工程），经 SWD 烧录。
+2. 构建 APP 镜像，并生成自有签名密钥对（`python tools/quilla_ed25519_sign.py keygen`）。
+3. `python tools/quilla_host_updater.py COMx app.bin --key private.hex` → `[+] UPGRADE COMPLETE ... ACK 0x84`。
+
+完整步骤见[快速开始](#快速开始)与 `doc/` 下的构建文档。
+
+**状态**（v1.0.0）：
+
+| 已上板验证 | 未验证 |
+| --- | --- |
+| 带签名的 QIAP 升级 → `ACK_SIGN 0x84`，APP 正常启动（PY32F040xB / GD32F502VE） | CH32V305VB RISC-V 移植——仅 bring-up，无上板结果 |
+| 防回滚下限在真机上推进（GD32 OTP 计数器 1→2）；降级被 `NAK 0x0A` 拒绝 | CH32V305 的 WPP 写保护 NV 计数器 |
+| ENTER 阶段**写入任何 Flash 之前**拒降级（CR-0055） | GUI 侧 SEC VER 分支；未烧公钥的开发板 |
+| 新上位机 ↔ 旧 QBOOT 兼容（16 字节 ENTER 被旧固件忽略多余字节） | 任何 IEC 61508 / SIL 认证——**未声称** |
+
+可复现的串口日志与完整矩阵：[`doc/verification.md`](doc/verification.md)。
+贡献指南：[`CONTRIBUTING.md`](CONTRIBUTING.md) · 安全问题上报与演示密钥边界：[`SECURITY.md`](SECURITY.md) · 发布说明：[`doc/release-notes.md`](doc/release-notes.md)。
+
 Quilla 由**机器人组件及光通信设计公司——深圳市积器仁信息有限公司（JiChiRen Info）**的开源办公室（OSPO）维护。其**代码基线派生自 [Contiki-NG](https://github.com/contiki-ng/contiki-ng)**（3-clause BSD）；功能设计**改编自**积器仁量产项目中实际使用的信息安全固件系统——剥离业务内容后，为开源重新适配了 3 个 Demo MCU，作为对开源社区的回馈。同一套代码已用于远程信息安全组件等工业项目，以及密码门锁等消费电子项目。
 
 公司网站：[https://www.jichiren.com](https://www.jichiren.com)

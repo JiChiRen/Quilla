@@ -23,6 +23,33 @@
 
 **English** · [中文](README.zh-CN.md)
 
+## At a glance
+
+**What it is**: a secure-boot-capable, OTA-ready embedded OS for small MCUs.
+A 24 KiB QBOOT bootloader verifies an Ed25519-signed APP, enforces an
+anti-rollback floor, and upgrades the image over UART with QIAP. The code
+baseline is Contiki-NG (3-clause BSD).
+
+**Shortest path to a running demo** (PY32F040xB or GD32F502VE board):
+
+1. Build QBOOT (`make -C user/<mcu>/EIDE -f Makefile.qboot`, or the Keil project) and flash it over SWD.
+2. Build an APP image and generate your own signing keypair (`python tools/quilla_ed25519_sign.py keygen`).
+3. `python tools/quilla_host_updater.py COMx app.bin --key private.hex` → `[+] UPGRADE COMPLETE ... ACK 0x84`.
+
+Full steps in [Quick start](#quick-start) and the build guides under `doc/`.
+
+**Status** (v1.0.0):
+
+| Verified on hardware | Not verified |
+| --- | --- |
+| Signed QIAP upgrade → `ACK_SIGN 0x84`, APP boots (PY32F040xB / GD32F502VE) | CH32V305VB RISC-V port — bring-up only, no on-target results |
+| Anti-rollback floor advanced on real hardware (OTP counter 1→2 on GD32); downgrade rejected with `NAK 0x0A` | WPP write-protected NV counter on CH32V305 |
+| ENTER-stage downgrade rejection **before any flash write** (CR-0055) | GUI-side SEC VER branches; boards without a provisioned public key |
+| New host ↔ old QBOOT compatibility (16-byte ENTER ignored by old firmware) | Any IEC 61508 / SIL certification — **not claimed** |
+
+Reproducible serial logs and the full matrix: [`doc/verification.md`](doc/verification.md).
+Contributions: [`CONTRIBUTING.md`](CONTRIBUTING.md) · Security reports and the demo-key boundary: [`SECURITY.md`](SECURITY.md) · Release notes: [`doc/release-notes.md`](doc/release-notes.md).
+
 Quilla is maintained by the Open Source Program Office (OSPO) of **Shenzhen JiChiRen Information Technology Co., Ltd. (JiChiRen Info. Tech.)**, a robotics-components and optical-communication design company. Its **code baseline is derived from [Contiki-NG](https://github.com/contiki-ng/contiki-ng)** (3-clause BSD). The feature set is **adapted from** the secure-firmware subsystem used in JiChiRen's production projects: business-specific content was stripped out and three demo MCUs were re-adapted for open source, so the work can be given back to the community. The same codebase already powers industrial projects such as remote information-security modules and consumer-electronics products such as cryptographic smart locks.
 
 Company site: [https://www.jichiren.com](https://www.jichiren.com)

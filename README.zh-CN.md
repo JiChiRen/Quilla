@@ -15,6 +15,10 @@
   <a href="https://github.com/JiChiRen/Quilla/actions/workflows/build.yml"><img src="https://github.com/JiChiRen/Quilla/actions/workflows/build.yml/badge.svg" alt="CI build"></a>
 </p>
 
+> CI 徽章只反映门禁 job（Arm 固件构建 + 上位机自检）。CH32V305 RISC-V job
+> 为**实验性、非阻塞**：该移植处于 bring-up 阶段，WPP 写保护 NV 计数器与 WCH
+> 快中断入口均未上板验证；该 job 编译通过不代表镜像能启动。
+
 **中文** · [English](README.md)
 
 Quilla 由**机器人组件及光通信设计公司——深圳市积器仁信息有限公司（JiChiRen Info）**的开源办公室（OSPO）维护。它脱胎于积器仁量产项目中实际使用的信息安全固件系统：剥离业务内容后，为开源重新适配了 3 个 Demo MCU，作为对开源社区的回馈。同一套代码已用于远程信息安全组件等工业项目，以及密码门锁等消费电子项目。

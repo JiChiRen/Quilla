@@ -15,6 +15,12 @@
   <a href="https://github.com/JiChiRen/Quilla/actions/workflows/build.yml"><img src="https://github.com/JiChiRen/Quilla/actions/workflows/build.yml/badge.svg" alt="CI build"></a>
 </p>
 
+> The CI badge covers the gating jobs (Arm firmware builds + host-tool
+> self-test). The CH32V305 RISC-V job is **experimental and non-blocking**:
+> that port is bring-up only, with the WPP write-protected NV counter and the
+> WCH fast-interrupt path not on-target verified. A green RISC-V build is not
+> evidence that the image boots.
+
 **English** · [中文](README.zh-CN.md)
 
 Quilla is maintained by the Open Source Program Office (OSPO) of **Shenzhen JiChiRen Information Technology Co., Ltd. (JiChiRen Info. Tech.)**, a robotics-components and optical-communication design company. It is derived from the secure-firmware subsystem used in JiChiRen's production projects: business-specific content was stripped out and three demo MCUs were re-adapted for open source, so the work can be given back to the community. The same codebase already powers industrial projects such as remote information-security modules and consumer-electronics products such as cryptographic smart locks.

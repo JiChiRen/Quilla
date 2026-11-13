@@ -13,10 +13,14 @@
 #                  armclang (Cortex-M33 secure-boot) builds require a Keil
 #                  license and are verified on a developer machine instead.
 #
-#   firmware-riscv : builds the CH32V305 port with a stock riscv-none-elf
-#                  toolchain, after rewriting the one WCH-only construct in the
-#                  sources. Catches generic regressions in shared code; does not
-#                  verify the WCH fast-interrupt path (see the job's comment).
+#   firmware-riscv : EXPERIMENTAL, NON-BLOCKING. Builds the CH32V305 port with
+#                  a stock riscv-none-elf toolchain after rewriting the one
+#                  WCH-only construct in the sources. This port is bring-up
+#                  only: the WPP write-protected NV counter and the WCH
+#                  fast-interrupt path are not on-target verified. Its
+#                  `continue-on-error` keeps a failure from gating the badge;
+#                  the failure stays visible in the job log and in a warning
+#                  annotation. See the job's comment for the full boundary.
 #
 #   host-tools   : runs the Python host-side tooling self-tests — the Ed25519
 #                  signing utility and the serial OTA updater shipped to
@@ -24,6 +28,9 @@
 #
 # The workflow builds out-of-tree under each MCU's EIDE directory, so a fresh
 # checkout never carries stale dependency files.
+#
+# The CI badge covers the three gating jobs (the Arm firmware builds and the
+# host-tools self-test). It is not evidence for the RISC-V port.
 
 name: CI
 
@@ -65,20 +72,31 @@ jobs:
         run: make -C user/${{ matrix.mcu }}/EIDE
 
   firmware-riscv:
-    # The CH32V305 port is built with the WCH "RISC-V Embedded GCC12" toolchain,
-    # whose fast-interrupt entry relies on a vendor-only attribute that mainline
-    # GCC rejects. That toolchain is not redistributable, so CI cannot use it.
+    # EXPERIMENTAL / NON-BLOCKING. CH32V305 is a first bring-up port:
+    #   * it builds only with the WCH "RISC-V Embedded GCC12" toolchain, whose
+    #     fast-interrupt entry uses a vendor-only attribute mainline GCC rejects;
+    #     that toolchain is not redistributable, so CI rewrites the attribute
+    #     away and CANNOT validate the WCH fast-interrupt path;
+    #   * the WPP write-protected NV counter (anti-rollback carrier) and the
+    #     rest of the port are not on-target verified (see
+    #     doc/riscv-ch32v305-build.md section 8, "Bring-up items").
     #
-    # Instead this job builds the same tree with a stock riscv-none-elf toolchain
-    # after rewriting that single vendor construct in place. It catches generic
+    # With a stock riscv-none-elf toolchain this job only catches generic
     # regressions in shared code -- syntax, types, missing symbols, linker-script
-    # drift -- but does NOT verify the WCH fast-interrupt entry path itself, so a
-    # green run here is not evidence that the RISC-V image boots.
-    name: Firmware (RISC-V, CH32V305)
+    # drift. `continue-on-error` keeps its failures from gating the badge until
+    # the bring-up items close out; the failed steps, job log and the warning
+    # annotation below remain visible. A green run here is NOT evidence that
+    # the RISC-V image boots.
+    name: Firmware (RISC-V, CH32V305) [experimental, non-blocking]
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Experimental status
+        run: |
+          echo "::warning title=CH32V305 job is experimental and non-blocking::Bring-up port: WPP write-protected NV counter and WCH fast-interrupt path are not on-target verified. A green build here is not evidence that the RISC-V image boots. Failures of this job do not gate the CI badge."
 
       - name: Install RISC-V toolchain
         run: |

@@ -81,26 +81,44 @@ Quilla 安全启动 / QIAP 参考平台的首个公开版本。
 Reviewed-by: Ali.
 
 ================================================================================
-Quilla.FR v1.0.0 / Quilla.ZP v1.0.0
+Quilla.FR v1.0.0
 ================================================================================
 
-EN — Paste into each repository's Release editor:
+EN — Paste into the Quilla.FR Release editor:
 
-> First public release of the Quilla.FR / Quilla.ZP reference design:
-> Quilla QBOOT booting a **FreeRTOS appliance on PY32F040xB (Cortex-M0+)** /
+> First public release of the Quilla.FR reference design: Quilla QBOOT booting
+> a **FreeRTOS appliance on PY32F040xB (Cortex-M0+)**. Boot and APP share no
+> code — only a binary flash contract (partition layout, META record, SEC VER
+> at image offset 0x400, shared 115200 console). QIAP upgrade verified on
+> hardware. `quilla/` is an independent, untracked upstream clone and is not
+> redistributed by this repository. Reviewed-by: Ali.
+
+中文 — 粘贴到 Quilla.FR 仓库的 Release 编辑框：
+
+> Quilla.FR 参考设计首个公开版本：Quilla QBOOT 引导 **PY32F040xB
+> （Cortex-M0+）上的 FreeRTOS 应用**。引导与 APP 零代码耦合，仅靠二进制
+> Flash 契约对接（分区布局、META 记录、镜像偏移 0x400 的 SEC VER、共用的
+> 115200 串口）。QIAP 升级已上板验证。`quilla/` 为独立、不跟踪的上游 clone，
+> 本仓库不重新分发。Reviewed-by: Ali.
+
+================================================================================
+Quilla.ZP v1.0.0
+================================================================================
+
+EN — Paste into the Quilla.ZP Release editor:
+
+> First public release of the Quilla.ZP reference design: Quilla QBOOT booting
 > a **Zephyr RTOS appliance on GD32F502VE (Cortex-M33)**. Boot and APP share
 > no code — only a binary flash contract (partition layout, META record, SEC
 > VER at image offset 0x400, shared 115200 console). QIAP upgrade verified on
-> hardware. `quilla/` and (for ZP) `appliance/`, `modules/` are independent,
-> untracked upstream clones and are not redistributed by this repository.
+> hardware. `quilla/`, `appliance/` and `modules/` are independent, untracked
+> upstream clones and are not redistributed by this repository.
 > Reviewed-by: Ali.
 
-中文 — 粘贴到对应仓库的 Release 编辑框：
+中文 — 粘贴到 Quilla.ZP 仓库的 Release 编辑框：
 
-> Quilla.FR / Quilla.ZP 参考设计首个公开版本：Quilla QBOOT 引导
-> **PY32F040xB（Cortex-M0+）上的 FreeRTOS 应用** /
-> **GD32F502VE（Cortex-M33）上的 Zephyr RTOS 应用**。引导与 APP 零代码耦合，
-> 仅靠二进制 Flash 契约对接（分区布局、META 记录、镜像偏移 0x400 的 SEC VER、
-> 共用的 115200 串口）。QIAP 升级已上板验证。`quilla/`（ZP 另含
-> `appliance/`、`modules/`）为独立、不跟踪的上游 clone，本仓库不重新分发。
-> Reviewed-by: Ali.
+> Quilla.ZP 参考设计首个公开版本：Quilla QBOOT 引导 **GD32F502VE
+> （Cortex-M33）上的 Zephyr RTOS 应用**。引导与 APP 零代码耦合，仅靠二进制
+> Flash 契约对接（分区布局、META 记录、镜像偏移 0x400 的 SEC VER、共用的
+> 115200 串口）。QIAP 升级已上板验证。`quilla/`、`appliance/`、`modules/`
+> 为独立、不跟踪的上游 clone，本仓库不重新分发。Reviewed-by: Ali.

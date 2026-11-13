@@ -23,7 +23,7 @@
 
 **English** · [中文](README.zh-CN.md)
 
-Quilla is maintained by the Open Source Program Office (OSPO) of **Shenzhen JiChiRen Information Technology Co., Ltd. (JiChiRen Info. Tech.)**, a robotics-components and optical-communication design company. It is derived from the secure-firmware subsystem used in JiChiRen's production projects: business-specific content was stripped out and three demo MCUs were re-adapted for open source, so the work can be given back to the community. The same codebase already powers industrial projects such as remote information-security modules and consumer-electronics products such as cryptographic smart locks.
+Quilla is maintained by the Open Source Program Office (OSPO) of **Shenzhen JiChiRen Information Technology Co., Ltd. (JiChiRen Info. Tech.)**, a robotics-components and optical-communication design company. Its **code baseline is derived from [Contiki-NG](https://github.com/contiki-ng/contiki-ng)** (3-clause BSD). The feature set is **adapted from** the secure-firmware subsystem used in JiChiRen's production projects: business-specific content was stripped out and three demo MCUs were re-adapted for open source, so the work can be given back to the community. The same codebase already powers industrial projects such as remote information-security modules and consumer-electronics products such as cryptographic smart locks.
 
 Company site: [https://www.jichiren.com](https://www.jichiren.com)
 
@@ -108,6 +108,6 @@ Entry point and reader navigation: [`doc/Home.md`](doc/Home.md) (English) ·
 
 ## License & attribution
 
-Quilla is derived from Contiki-NG. Unless explicitly stated otherwise, sources are distributed under the [3-clause BSD license](LICENSE.md), retaining the upstream copyright notice; derived files also carry `Copyright (c) 2026, JiChiRen Info. Tech.`
+Quilla is derived from Contiki-NG. Unless explicitly stated otherwise, sources are distributed under the [3-clause BSD license](LICENSE.md), retaining the upstream copyright notice; derived files also carry `Copyright (c) 2026, JiChiRen Info. Tech.` See [`NOTICE`](NOTICE) for the full attribution and the upstream notices that are kept.
 
-The original upstream README is preserved as [`CONTIKI-README.md`](CONTIKI-README.md) for Contiki-NG attribution and reference.
+The original upstream README is preserved as [`CONTIKI-README.md`](CONTIKI-README.md) for Contiki-NG attribution and reference. Upstream documentation under `doc/upstream/` is kept verbatim and describes Contiki-NG, not Quilla. Quilla is an independent derivative; it is **not endorsed by or affiliated with** the Contiki-NG project.

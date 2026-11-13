@@ -1,0 +1,72 @@
+Quilla
+Copyright (c) 2026 JiChiRen Info. Tech.
+
+================================================================================
+English
+================================================================================
+
+Code baseline
+-------------
+Quilla's code baseline is derived from Contiki-NG
+(https://github.com/contiki-ng/contiki-ng), which is distributed under the
+3-clause BSD license. Files inherited from Contiki-NG keep their original
+copyright headers in place, including notices such as
+"Copyright (c) 2004-2006, Swedish Institute of Computer Science" and the
+other upstream notices present in those files.
+
+The original upstream README is preserved as CONTIKI-README.md. Upstream
+documentation under doc/upstream/ is kept verbatim; it describes Contiki-NG,
+not Quilla (see doc/upstream/README.md).
+
+Quilla-owned code
+-----------------
+The dual-partition QBOOT bootloader, the QIAP upgrade protocol, secure boot,
+host tools and Quilla's own documentation are
+Copyright (c) 2026 JiChiRen Info. Tech. and are distributed under the
+3-clause BSD license (see LICENSE.md). Derived files additionally carry
+this copyright line alongside the retained upstream notice.
+
+Attribution boundaries
+----------------------
+Quilla is an independent derivative of Contiki-NG. It is not endorsed by,
+sponsored by, or affiliated with the Contiki-NG project or its maintainers.
+The Contiki-NG name is used solely to state the factual origin of the code.
+
+Third-party material
+--------------------
+Vendor HAL / CMSIS files under arch/cpu/ keep their original copyright and
+license headers. Each file's own header is authoritative for its terms.
+The demo keypair under tools/_keytest/ is intentionally public and is for
+development only; it is not a security control.
+
+================================================================================
+中文
+================================================================================
+
+代码基线
+--------
+Quilla 的代码基线派生自 Contiki-NG
+(https://github.com/contiki-ng/contiki-ng)，其按 3-clause BSD 许可分发。
+继承自 Contiki-NG 的文件均保留原始版权头，包括
+「Copyright (c) 2004-2006, Swedish Institute of Computer Science」及这些
+文件中原有的其他上游声明。
+
+上游原始 README 备份为 CONTIKI-README.md。doc/upstream/ 下的上游文档原样
+保留，描述对象是 Contiki-NG 而非 Quilla（见 doc/upstream/README.md）。
+
+Quilla 自有代码
+--------------
+双分区 QBOOT 引导、QIAP 升级协议、安全启动、上位机工具及 Quilla 自有文档
+版权归 Copyright (c) 2026 JiChiRen Info. Tech. 所有，按 3-clause BSD 许可
+分发（见 LICENSE.md）。派生文件在保留上游声明的同时另附该版权行。
+
+归属边界
+--------
+Quilla 是 Contiki-NG 的独立派生项目，未获 Contiki-NG 项目或其维护者背书、
+赞助，也不存在隶属关系。提及 Contiki-NG 名称仅用于如实说明代码来源。
+
+第三方材料
+----------
+arch/cpu/ 下的厂商 HAL / CMSIS 文件保留各自的原始版权与许可头，具体条款
+以各文件自身的文件头为准。tools/_keytest/ 下的演示密钥对刻意公开，仅供
+开发使用，不构成安全控制。

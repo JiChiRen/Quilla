@@ -21,7 +21,7 @@
 
 **中文** · [English](README.md)
 
-Quilla 由**机器人组件及光通信设计公司——深圳市积器仁信息有限公司（JiChiRen Info）**的开源办公室（OSPO）维护。它脱胎于积器仁量产项目中实际使用的信息安全固件系统：剥离业务内容后，为开源重新适配了 3 个 Demo MCU，作为对开源社区的回馈。同一套代码已用于远程信息安全组件等工业项目，以及密码门锁等消费电子项目。
+Quilla 由**机器人组件及光通信设计公司——深圳市积器仁信息有限公司（JiChiRen Info）**的开源办公室（OSPO）维护。其**代码基线派生自 [Contiki-NG](https://github.com/contiki-ng/contiki-ng)**（3-clause BSD）；功能设计**改编自**积器仁量产项目中实际使用的信息安全固件系统——剥离业务内容后，为开源重新适配了 3 个 Demo MCU，作为对开源社区的回馈。同一套代码已用于远程信息安全组件等工业项目，以及密码门锁等消费电子项目。
 
 公司网站：[https://www.jichiren.com](https://www.jichiren.com)
 
@@ -113,6 +113,6 @@ python tools/quilla_ed25519_sign.py sign --key private.hex app.bin
 
 ## 许可与归属
 
-Quilla 派生自 Contiki-NG。除非显式声明，源代码在原 **3-clause BSD license** 下分发，并保留上游版权声明；派生源另含 `Copyright (c) 2026, JiChiRen Info. Tech.`。完整许可见 [`LICENSE.md`](LICENSE.md)。
+Quilla 派生自 Contiki-NG。除非显式声明，源代码在原 **3-clause BSD license** 下分发，并保留上游版权声明；派生源另含 `Copyright (c) 2026, JiChiRen Info. Tech.`。完整归属与保留的上游声明见 [`NOTICE`](NOTICE)，完整许可见 [`LICENSE.md`](LICENSE.md)。
 
-原始上游 README 已备份为 [`CONTIKI-README.md`](CONTIKI-README.md)，供查阅 Contiki-NG 原始说明与归属信息。
+原始上游 README 已备份为 [`CONTIKI-README.md`](CONTIKI-README.md)，供查阅 Contiki-NG 原始说明与归属信息。`doc/upstream/` 下的上游文档原样保留，描述对象是 Contiki-NG 而非 Quilla。Quilla 为独立派生项目，**未获 Contiki-NG 项目背书，也不与其存在隶属关系**。

@@ -4,7 +4,7 @@
 
 Quilla is a safety-oriented embedded runtime built on top of Contiki-NG, with a **QBOOT / QAPP dual-partition boot architecture**. This page is the documentation entry point, organized by reader role, and lists only the documents that live in this public repository.
 
-Quilla is maintained by the Open Source Program Office (OSPO) of **Shenzhen JiChiRen Information Technology Co., Ltd. (JiChiRen Info. Tech.)**, a robotics-components and optical-communication design company. It originated from the secure-firmware subsystem used in JiChiRen's production projects — business content stripped, three demo MCUs re-adapted for open source — and is released as a contribution back to the community. The same codebase already powers industrial projects (e.g. remote information-security modules) and consumer electronics (e.g. cryptographic smart locks). Company site: [https://www.jichiren.com](https://www.jichiren.com)
+Quilla is maintained by the Open Source Program Office (OSPO) of **Shenzhen JiChiRen Information Technology Co., Ltd. (JiChiRen Info. Tech.)**, a robotics-components and optical-communication design company. It originated from the secure-firmware subsystem used in JiChiRen's production projects — business content stripped, three demo MCUs re-adapted for open source — and is released as a contribution back to the community. That subsystem's design has been exercised in production firmware for industrial and consumer-electronics products; the code published here is an open-source re-adaptation, not the shipped production artifact. Company site: [https://www.jichiren.com](https://www.jichiren.com)
 
 General Contiki-NG material (build system, networking, tutorials, other platforms) remains the upstream project's and is isolated under [`doc/upstream/`](upstream/README.md) — it describes Contiki-NG, not Quilla. This repository's own docs (everything directly under `doc/`) cover Quilla's architecture, build, and delivery flow.
 
@@ -48,3 +48,14 @@ Tooling deliverables are described in `tools/README.md`: the flashing tool and t
 - Dynamic memory allocation is forbidden in this project.
 - Coding guidelines and their scope: `coding-guidelines.md`.
 - License: see `LICENSE.md` at the repository root.
+
+---
+
+## 4. Community & maintenance
+
+| Topic | Document |
+|---|---|
+| Building locally, CI gates, commit conventions | [`CONTRIBUTING.md`](../CONTRIBUTING.md) |
+| Reporting security issues & the demo-key boundary | [`SECURITY.md`](../SECURITY.md) |
+| On-target verification logs & status matrix | [`verification.md`](verification.md) |
+| Release notes (v1.0.0) | [`release-notes.md`](release-notes.md) |

@@ -5,7 +5,7 @@
 Quilla 是在 Contiki-NG 基础上扩展的安全关键嵌入式运行时，采用 QBOOT / QAPP 双区引导架构。
 本文是文档入口，按读者角色列出**本公开仓库内实际存在的文档**。
 
-Quilla 由**机器人组件及光通信设计公司——深圳市积器仁信息有限公司（JiChiRen Info）**的开源办公室（OSPO）维护。它脱胎于积器仁量产项目中的信息安全固件系统——剥离业务内容、为开源重新适配 3 个 Demo MCU——作为对开源社区的回馈对外发布。同一套代码已用于工业项目（如远程信息安全组件）与消费电子（如密码门锁）。公司网站：[https://www.jichiren.com](https://www.jichiren.com)
+Quilla 由**机器人组件及光通信设计公司——深圳市积器仁信息有限公司（JiChiRen Info）**的开源办公室（OSPO）维护。它脱胎于积器仁量产项目中的信息安全固件系统——剥离业务内容、为开源重新适配 3 个 Demo MCU——作为对开源社区的回馈对外发布。该子系统的设计已在面向工业与消费电子产品的量产固件中实际使用；此处发布的代码是开源再适配版本，并非交付产品的原始固件。公司网站：[https://www.jichiren.com](https://www.jichiren.com)
 
 上游 Contiki-NG 的通用说明（构建系统、网络、教程、其它平台）已隔离至 [`doc/upstream/`](upstream/README.md)——它们讲的是 Contiki-NG，不是 Quilla；本仓库自有文档（直接位于 `doc/` 下的部分）仅覆盖 Quilla 自身的架构、构建与交付流程。
 
@@ -49,3 +49,14 @@ Quilla 由**机器人组件及光通信设计公司——深圳市积器仁信�
 - 本项目禁止动态内存分配。
 - 编码规范及其范围：`coding-guidelines.zh-CN.md`。
 - 许可证见根目录 `LICENSE.md`。
+
+---
+
+## 4. 社区与维护
+
+| 主题 | 文档 |
+|---|---|
+| 本地构建、CI 门禁、提交约定 | [`CONTRIBUTING.md`](../CONTRIBUTING.md) |
+| 安全问题上报与演示密钥边界 | [`SECURITY.md`](../SECURITY.md) |
+| 上板验证日志与状态矩阵 | [`verification.md`](verification.md) |
+| 发布说明（v1.0.0） | [`release-notes.md`](release-notes.md) |

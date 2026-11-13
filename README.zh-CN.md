@@ -47,7 +47,7 @@ QBOOT 验签 Ed25519 签名的 APP、执行防回滚下限，并通过 QIAP 经�
 可复现的串口日志与完整矩阵：[`doc/verification.md`](doc/verification.md)。
 贡献指南：[`CONTRIBUTING.md`](CONTRIBUTING.md) · 安全问题上报与演示密钥边界：[`SECURITY.md`](SECURITY.md) · 发布说明：[`doc/release-notes.md`](doc/release-notes.md)。
 
-Quilla 由**机器人组件及光通信设计公司——深圳市积器仁信息有限公司（JiChiRen Info）**的开源办公室（OSPO）维护。其**代码基线派生自 [Contiki-NG](https://github.com/contiki-ng/contiki-ng)**（3-clause BSD）；功能设计**改编自**积器仁量产项目中实际使用的信息安全固件系统——剥离业务内容后，为开源重新适配了 3 个 Demo MCU，作为对开源社区的回馈。同一套代码已用于远程信息安全组件等工业项目，以及密码门锁等消费电子项目。
+Quilla 由**机器人组件及光通信设计公司——深圳市积器仁信息有限公司（JiChiRen Info）**的开源办公室（OSPO）维护。其**代码基线派生自 [Contiki-NG](https://github.com/contiki-ng/contiki-ng)**（3-clause BSD）；功能设计**改编自**积器仁量产项目中实际使用的信息安全固件系统——剥离业务内容后，为开源重新适配了 3 个 Demo MCU，作为对开源社区的回馈。该子系统的设计已在面向工业与消费电子产品的量产固件中实际使用；此处发布的代码是开源再适配版本，并非交付产品的原始固件。
 
 公司网站：[https://www.jichiren.com](https://www.jichiren.com)
 

@@ -27,6 +27,13 @@
 QBOOT 验签 Ed25519 签名的 APP、执行防回滚下限，并通过 QIAP 经串口升级镜像。
 代码基线为 Contiki-NG（3-clause BSD）。
 
+**引导与 APP 解耦**：QBOOT 与 APP 不共享任何代码或头文件，只靠二进制 Flash
+契约对接（分区布局、META 记录、镜像偏移 `0x400` 的 SEC VER）。APP 既可以是
+Quilla 自带的 Contiki 运行时，也可以是第三方 RTOS：
+[Quilla.ZP](https://github.com/JiChiRen/Quilla.ZP) 引导 Zephyr 应用、
+[Quilla.FR](https://github.com/JiChiRen/Quilla.FR) 引导 FreeRTOS 应用，两者
+均已有真机 QIAP 升级结果；QBOOT 本身在这些方案里没有改动。
+
 **最短可复现路径**（PY32F040xB 或 GD32F502VE 板）：
 
 1. 构建 QBOOT（`make -C user/<mcu>/EIDE -f Makefile.qboot`，或用 Keil 工程），经 SWD 烧录。

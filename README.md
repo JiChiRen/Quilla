@@ -30,6 +30,14 @@ A 24 KiB QBOOT bootloader verifies an Ed25519-signed APP, enforces an
 anti-rollback floor, and upgrades the image over UART with QIAP. The code
 baseline is Contiki-NG (3-clause BSD).
 
+**The bootloader and the APP are decoupled**: QBOOT shares no code or header
+with the APP — only a binary flash contract (partition layout, META record,
+SEC VER at image offset `0x400`). The APP can be Quilla's own Contiki-based
+runtime or a third-party RTOS: [Quilla.ZP](https://github.com/JiChiRen/Quilla.ZP)
+boots a Zephyr appliance and [Quilla.FR](https://github.com/JiChiRen/Quilla.FR)
+boots a FreeRTOS appliance, both with on-target QIAP upgrade results. QBOOT
+itself is unchanged between these variants.
+
 **Shortest path to a running demo** (PY32F040xB or GD32F502VE board):
 
 1. Build QBOOT (`make -C user/<mcu>/EIDE -f Makefile.qboot`, or the Keil project) and flash it over SWD.

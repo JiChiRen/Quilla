@@ -131,6 +131,7 @@ python tools/quilla_ed25519_sign.py sign --key private.hex app.bin
 完整构建步骤见 [`doc/keil-qboot-app-build.md`](doc/keil-qboot-app-build.md)，升级工具见 [`doc/quilla-host-updater-guide.md`](doc/quilla-host-updater-guide.md)。
 
 > **想要图形化工具？** [`QuillaUpdater`](https://github.com/JiChiRen/QuillaUpdater) 是同一套 QIAP 升级流程的独立 Tk 图形上位机（命令行 `quflash` 同引擎）——选串口、选 `.bin`、点开始；带预检、可协作取消、中英双语。Python 3.8+，仅依赖 `pyserial`，无需 Qt/Node/安装包。
+> 需要用调试探针做镜像打包 / SWD 烧录时，[`QuillaImage`](https://github.com/JiChiRen/QuillaImage) 把 QBOOT + APP + manifest 合并为签名整片镜像并直接烧录（基于 pyocd、识别 CMSIS-Pack，PySide6 界面，中英双语）。
 
 ## 文档
 

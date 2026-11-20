@@ -127,6 +127,7 @@ python tools/quilla_ed25519_sign.py sign --key private.hex app.bin
 See [`doc/keil-qboot-app-build.md`](doc/keil-qboot-app-build.md) for full build steps and [`doc/quilla-host-updater-guide.md`](doc/quilla-host-updater-guide.md) for the upgrade tool.
 
 > **Prefer a graphical tool?** [`QuillaUpdater`](https://github.com/JiChiRen/QuillaUpdater) is a standalone Tk GUI (plus the same engine on the CLI, `quflash`) for this exact QIAP upgrade flow — pick a port, pick a `.bin`, click start. It adds pre-flight checks, cooperative cancel and a bilingual UI. Python 3.8+, `pyserial` only, no Qt/Node/installer.
+> For image preparation and SWD flashing with a debug probe, [`QuillaImage`](https://github.com/JiChiRen/QuillaImage) merges QBOOT + APP + manifest into a signed single image and flashes it (CMSIS-Pack aware, pyocd-based, PySide6 GUI, bilingual).
 
 ## Documentation
 
